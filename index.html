@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React 코어 비주얼라이저</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./vdom.js"></script>
+  <script defer src="./diff.js"></script>
+  <script defer src="./patch.js"></script>
+  <script defer src="./history.js"></script>
+  <script defer src="./tree.js"></script>
+  <script defer src="./interaction.js"></script>
+  <script defer src="./main.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-bar">
+        <div class="window-orb" aria-hidden="true">×</div>
+
+        <div class="hero-title-block">
+          <p class="eyebrow">React Internal Monitor</p>
+          <h1>React 코어 비주얼라이저</h1>
+        </div>
+
+        <nav class="hero-pills" aria-label="주요 개념">
+          <span class="hero-pill hero-pill-active">Virtual DOM</span>
+          <span class="hero-pill">Diff</span>
+          <span class="hero-pill">Patch</span>
+          <span class="hero-pill">History</span>
+          <span class="hero-pill">SVG Tree</span>
+          <span class="hero-pill">DOM Sync</span>
+        </nav>
+      </div>
+
+      <div class="hero-dashboard">
+        <div class="hero-copy-block">
+          <p class="hero-kicker">Interactive Tree Workspace</p>
+          <p class="hero-copy">
+            현재 트리에서 수행하는 수정, 추가, 삭제, 이동은 먼저 오른쪽 트리의 초안 상태에만 반영됩니다.
+            <strong>Patch</strong> 버튼을 누르는 순간에만 실제 DOM과 비교 히스토리가 갱신되어
+            왼쪽 트리가 진짜 이전 상태로 확정됩니다.
+          </p>
+
+          <div class="hero-subchips">
+            <span class="hero-mini-pill">Patch 전: 우측 트리만 변경</span>
+            <span class="hero-mini-pill">Patch 후: 좌우 비교 확정</span>
+            <span class="hero-mini-pill">실제 DOM은 Patch 시점만 반영</span>
+            <span class="hero-mini-pill">Undo / Redo는 확정 후 사용</span>
+          </div>
+        </div>
+
+        <div class="hero-stats" aria-label="실시간 상태">
+          <article class="hero-stat">
+            <span>선택 노드</span>
+            <strong id="hero-selection-value">없음</strong>
+            <small id="hero-selection-note">현재 트리에서 노드를 고르세요</small>
+          </article>
+          <article class="hero-stat">
+            <span>작업 모드</span>
+            <strong id="hero-mode-value">현재 트리</strong>
+            <small id="hero-mode-note">Patch 전에는 초안만 바뀝니다</small>
+          </article>
+          <article class="hero-stat">
+            <span>대기 중 패치</span>
+            <strong id="hero-patch-value">0</strong>
+            <small id="hero-patch-note">초안 변경 없음</small>
+          </article>
+          <article class="hero-stat">
+            <span>실제 DOM</span>
+            <strong id="hero-dom-value">동기화</strong>
+            <small id="hero-dom-note">마지막 Patch 기준</small>
+          </article>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel stage-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-label">메인 스테이지</p>
+            <h2>트리 중심 학습 공간</h2>
+          </div>
+          <div class="legend" aria-label="diff 범례">
+            <span><i class="swatch swatch-change"></i>변경</span>
+            <span><i class="swatch swatch-add"></i>추가</span>
+            <span><i class="swatch swatch-remove"></i>삭제</span>
+            <span><i class="swatch swatch-move"></i>이동</span>
+          </div>
+        </div>
+
+        <p class="stage-note">
+          현재 트리에서는 선택된 노드 주변에 빠른 조작 버튼이 나타납니다.
+          <code>+</code> 자식 추가, <code>-</code> 삭제, <code>^</code> 위로 이동,
+          <code>v</code> 아래로 이동입니다. 여기서 만든 변화는 먼저 우측 트리 미리보기에만 반영됩니다.
+        </p>
+
+        <section class="summary-strip" aria-label="현재 비교 수치">
+          <div class="summary-strip-head">
+            <div>
+              <p class="panel-label">패치 요약 보드</p>
+              <h3>현재 비교 수치</h3>
+            </div>
+            <span class="chip" id="summary-chip">적용된 패치</span>
+          </div>
+          <div class="summary-metrics summary-metrics-inline" id="summary-metrics"></div>
+        </section>
+
+        <section class="work-strip" aria-label="현재 작업">
+          <div class="work-strip-head">
+            <div>
+              <p class="panel-label">Current Selection</p>
+              <h3 id="selection-label">선택된 노드가 없습니다.</h3>
+            </div>
+            <div class="commit-preview">
+              <div class="commit-preview-head">
+                <p class="panel-label">Commit View</p>
+                <span class="chip" id="commit-state-chip">No Draft</span>
+              </div>
+              <p id="selection-meta" class="selection-meta">
+                트리에서 노드를 선택하고, Add/Delete/Move는 트리에서 직접 실행하세요. Edit와 Patch 계열 작업은 여기서 처리합니다.
+              </p>
+              <ul class="commit-preview-list" id="commit-preview-list"></ul>
+            </div>
+          </div>
+
+          <div class="button-row work-strip-actions">
+            <button id="apply-node-btn" type="button">Edit</button>
+            <button id="patch-btn" type="button">Patch</button>
+            <button id="reset-draft-btn" type="button">Reset Draft</button>
+            <button id="undo-btn" type="button">Undo</button>
+            <button id="redo-btn" type="button">Redo</button>
+          </div>
+        </section>
+
+        <div class="tree-grid">
+          <article class="tree-card">
+            <div class="tree-card-heading">
+              <div>
+                <p class="panel-label">비교 기준</p>
+                <h3 id="left-tree-title">이전 트리</h3>
+              </div>
+              <span class="chip">Patch 확정 전 기준</span>
+            </div>
+            <div class="tree-stage" id="left-tree-stage"></div>
+          </article>
+
+          <article class="tree-card current-tree-card">
+            <div class="tree-card-heading">
+              <div>
+                <p class="panel-label">작업 중 트리</p>
+                <h3 id="right-tree-title">현재 트리</h3>
+              </div>
+              <span class="chip" id="mode-chip">현재 트리</span>
+            </div>
+            <div class="tree-stage" id="right-tree-stage"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel dom-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-label">패치 결과</p>
+            <h2>실제 DOM 미리보기</h2>
+          </div>
+          <span class="chip">document.createElement</span>
+        </div>
+        <p class="stage-note dom-note">
+          이 영역은 마지막으로 <strong>Patch</strong>가 적용된 실제 DOM입니다.
+          초안 상태를 여러 번 바꿔도 Patch 버튼을 누르기 전까지는 이 화면이 유지됩니다.
+        </p>
+        <div id="dom-stage" class="dom-stage" aria-live="polite"></div>
+      </section>
+
+      <section class="panel html-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-label">하단 초안 편집기</p>
+            <h2>HTML 초안과 적용 제어</h2>
+          </div>
+          <span class="chip">Patch가 실제 반영 시점</span>
+        </div>
+
+        <textarea id="html-input" spellcheck="false" aria-label="HTML 초안 편집기"></textarea>
+        <p class="hint">
+          현재는 트리 카드 안에서 초안 조작과 Patch를 모두 할 수 있습니다.
+          이 HTML 편집기는 고급 수동 편집용이며, 여기서 바꾼 내용도 트리의 <strong>Patch 적용</strong> 버튼으로 확정됩니다.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="node-form-dialog" class="node-form-dialog">
+    <form method="dialog" class="node-form" id="node-form">
+      <div class="node-form-head">
+        <p class="panel-label">Node Editor</p>
+        <h3 id="node-form-title">Edit Node</h3>
+      </div>
+
+      <label class="node-form-field">
+        <span>Tag</span>
+        <input id="node-form-tag" type="text" placeholder="div">
+      </label>
+
+      <label class="node-form-field">
+        <span>Text</span>
+        <input id="node-form-text" type="text" placeholder="Visible text">
+      </label>
+
+      <label class="node-form-field">
+        <span>Class</span>
+        <input id="node-form-class" type="text" placeholder="card accent">
+      </label>
+
+      <div class="button-row node-form-actions">
+        <button type="button" id="node-form-cancel">Cancel</button>
+        <button type="submit" id="node-form-submit">Apply</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,289 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: React 내부 동작 스튜디오
+      - heading "Virtual DOM 패치가 트리를 따라 이동하는 과정을 살펴보세요" [level=1] [ref=e6]
+      - paragraph [ref=e7]: 이 화면의 중심은 좌우 두 개의 SVG 트리입니다. 트리 버튼과 노드 실험실 조작은 바로 실제 DOM에 적용되지 않고 먼저 오른쪽 초안 트리에 누적됩니다. 아래의 Patch 버튼을 눌렀을 때만 실제 DOM과 히스토리에 반영됩니다.
+    - generic "학습 단계" [ref=e8]:
+      - article [ref=e9]:
+        - generic [ref=e10]: "1"
+        - strong [ref=e11]: 선택
+        - paragraph [ref=e12]: 현재 트리에서 기준 노드를 클릭하세요.
+      - article [ref=e13]:
+        - generic [ref=e14]: "2"
+        - strong [ref=e15]: 초안 작성
+        - paragraph [ref=e16]: 노드 수정, 추가, 이동, 삭제를 초안으로 쌓아보세요.
+      - article [ref=e17]:
+        - generic [ref=e18]: "3"
+        - strong [ref=e19]: Patch 적용
+        - paragraph [ref=e20]: 마지막에 Patch 버튼으로 실제 DOM 변화를 확인하세요.
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: 메인 스테이지
+          - heading "트리 중심 학습 공간" [level=2] [ref=e26]
+        - generic "diff 범례" [ref=e27]:
+          - generic [ref=e28]: 변경
+          - generic [ref=e30]: 추가
+          - generic [ref=e32]: 삭제
+          - generic [ref=e34]: 이동
+      - paragraph [ref=e36]:
+        - text: 현재 트리의 빠른 조작 버튼은 초안에만 반영됩니다.
+        - code [ref=e37]: +
+        - text: 버튼은 아래 실험실의
+        - strong [ref=e38]: 추가 위치
+        - text: 설정을 따라 새 노드를 넣고,
+        - code [ref=e39]: "-"
+        - text: ","
+        - code [ref=e40]: ^
+        - text: ","
+        - code [ref=e41]: v
+        - text: 도 모두 초안 상태만 바꿉니다.
+      - generic [ref=e42]:
+        - article [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - paragraph [ref=e46]: 기준 스냅샷
+              - heading "이전 트리" [level=3] [ref=e47]
+            - generic [ref=e48]: 비교 기준
+          - img "Virtual DOM 트리" [ref=e267]:
+            - generic [ref=e278]:
+              - button "#text \"React 코어 비주얼라이저\"" [ref=e279]:
+                - generic: "#text"
+                - generic: React 코어 비주얼라이
+              - button "<h1>" [ref=e281]:
+                - generic: h1
+                - generic: React 코어 비주얼라이
+              - button "#text \"패치가 실제로 어떤 노드만 바꾸는\"" [ref=e283]:
+                - generic: "#text"
+                - generic: 패치가 실제로 어떤 노드만
+              - button "<p>" [ref=e285]:
+                - generic: p
+                - generic: 패치가 실제로 어떤 노드만
+              - button "<header.intro>" [ref=e287]:
+                - generic: header
+              - button "#text \"Virtual DOM\"" [ref=e289]:
+                - generic: "#text"
+                - generic: Virtual DOM
+              - button "<h2>" [ref=e291]:
+                - generic: h2
+                - generic: Virtual DOM
+              - button "#text \"스냅샷을 비교하면 diff와 pa\"" [ref=e293]:
+                - generic: "#text"
+                - generic: 스냅샷을 비교하면 diff
+              - button "<p>" [ref=e295]:
+                - generic: p
+                - generic: 스냅샷을 비교하면 diff
+              - button "<article.concept>" [ref=e297]:
+                - generic: article
+              - button "#text \"노드를 선택해보세요\"" [ref=e299]:
+                - generic: "#text"
+                - generic: 노드를 선택해보세요
+              - button "<li>" [ref=e301]:
+                - generic: li
+                - generic: 노드를 선택해보세요
+              - button "#text \"props나 텍스트를 바꿔보세요\"" [ref=e303]:
+                - generic: "#text"
+                - generic: props나 텍스트를 바꿔
+              - button "<li>" [ref=e305]:
+                - generic: li
+                - generic: props나 텍스트를 바꿔
+              - button "#text \"패치 로그를 확인해보세요\"" [ref=e307]:
+                - generic: "#text"
+                - generic: 패치 로그를 확인해보세요
+              - button "<li>" [ref=e309]:
+                - generic: li
+                - generic: 패치 로그를 확인해보세요
+              - button "<ul.steps>" [ref=e311]:
+                - generic: ul
+              - button "<section#lesson-board.study-board>" [ref=e313]:
+                - generic: section
+              - button "<div#playground-root>" [ref=e315]:
+                - generic: div
+        - article [ref=e100]:
+          - generic [ref=e101]:
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: 현재 또는 초안
+              - heading "현재 트리" [level=3] [ref=e104]
+            - generic [ref=e105]: 현재 트리
+          - img "Virtual DOM 트리" [ref=e317]:
+            - generic [ref=e328]:
+              - button "#text \"React 코어 비주얼라이저\"" [ref=e329]:
+                - generic: "#text"
+                - generic: React 코어 비주얼라이
+              - button "<h1>" [ref=e331]:
+                - generic: h1
+                - generic: React 코어 비주얼라이
+              - button "#text \"패치가 실제로 어떤 노드만 바꾸는\"" [ref=e333]:
+                - generic: "#text"
+                - generic: 패치가 실제로 어떤 노드만
+              - button "<p>" [ref=e335]:
+                - generic: p
+                - generic: 패치가 실제로 어떤 노드만
+              - button "<header.intro>" [ref=e337]:
+                - generic: header
+              - button "#text \"Virtual DOM\"" [ref=e339]:
+                - generic: "#text"
+                - generic: Virtual DOM
+              - button "<h2>" [ref=e341]:
+                - generic: h2
+                - generic: Virtual DOM
+              - button "#text \"스냅샷을 비교하면 diff와 pa\"" [ref=e343]:
+                - generic: "#text"
+                - generic: 스냅샷을 비교하면 diff
+              - button "<p>" [ref=e345]:
+                - generic: p
+                - generic: 스냅샷을 비교하면 diff
+              - button "<article.concept>" [ref=e347]:
+                - generic: article
+              - button "#text \"노드를 선택해보세요\"" [ref=e349]:
+                - generic: "#text"
+                - generic: 노드를 선택해보세요
+              - button "<li>" [ref=e351]:
+                - generic: li
+                - generic: 노드를 선택해보세요
+              - button "#text \"props나 텍스트를 바꿔보세요\"" [ref=e353]:
+                - generic: "#text"
+                - generic: props나 텍스트를 바꿔
+              - button "<li>" [ref=e355]:
+                - generic: li
+                - generic: props나 텍스트를 바꿔
+              - button "#text \"패치 로그를 확인해보세요\"" [ref=e357]:
+                - generic: "#text"
+                - generic: 패치 로그를 확인해보세요
+              - button "<li>" [ref=e359]:
+                - generic: li
+                - generic: 패치 로그를 확인해보세요
+              - button "<ul.steps>" [ref=e361]:
+                - generic: ul
+              - button "<section#lesson-board.study-board>" [ref=e363]:
+                - generic: section
+              - button "<div#playground-root>" [ref=e365]:
+                - generic: div
+            - generic [ref=e367]:
+              - button "선택 노드의 자식으로 추가" [ref=e368] [cursor=pointer]:
+                - generic: +
+              - button "노드 삭제 초안" [ref=e370] [cursor=pointer]:
+                - generic: "-"
+              - button "위로 이동 초안" [ref=e372] [cursor=pointer]:
+                - generic: ^
+              - button "아래로 이동 초안" [ref=e374] [cursor=pointer]:
+                - generic: v
+    - generic [ref=e166]:
+      - generic [ref=e167]:
+        - generic [ref=e168]:
+          - paragraph [ref=e169]: 노드 실험실
+          - heading "선택 노드 편집과 초안 작성" [level=2] [ref=e170]
+        - generic [ref=e171]: 적용된 패치
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - paragraph [ref=e175]: 선택된 노드
+            - paragraph [ref=e176]: <li>
+            - paragraph [ref=e177]: 선택 노드를 수정하거나, 이 노드를 기준으로 새로운 초안 변경을 계속 쌓아보세요.
+          - generic [ref=e178]:
+            - paragraph [ref=e179]: 선택 노드 수정
+            - paragraph [ref=e180]: 이 영역은 현재 선택된 노드 자체를 수정합니다. 여기서 변경한 내용도 먼저 초안에만 반영됩니다.
+            - generic [ref=e181]:
+              - generic [ref=e182]:
+                - generic [ref=e183]: 태그
+                - textbox "태그" [ref=e184]:
+                  - /placeholder: div
+                  - text: li
+              - generic [ref=e185]:
+                - generic [ref=e186]: 직접 텍스트
+                - textbox "직접 텍스트" [ref=e187]:
+                  - /placeholder: 선택 노드의 직접 텍스트
+                  - text: props나 텍스트를 바꿔보세요
+              - generic [ref=e188]:
+                - generic [ref=e189]: id
+                - textbox "id" [ref=e190]:
+                  - /placeholder: card-1
+              - generic [ref=e191]:
+                - generic [ref=e192]: class
+                - textbox "class" [ref=e193]:
+                  - /placeholder: card accent
+            - button "수정 초안 만들기" [ref=e195] [cursor=pointer]
+          - generic [ref=e196]:
+            - paragraph [ref=e197]: 추가할 노드
+            - paragraph [ref=e198]: 아래 필드로 새 노드를 정의하고, 선택된 노드를 기준으로 어디에 넣을지 고르세요.
+            - generic [ref=e199]:
+              - generic [ref=e200]:
+                - generic [ref=e201]: 추가할 태그
+                - textbox "추가할 태그" [ref=e202]:
+                  - /placeholder: div
+                  - text: div
+              - generic [ref=e203]:
+                - generic [ref=e204]: 추가할 텍스트
+                - textbox "추가할 텍스트" [ref=e205]:
+                  - /placeholder: 새 노드의 텍스트
+              - generic [ref=e206]:
+                - generic [ref=e207]: 추가할 id
+                - textbox "추가할 id" [ref=e208]:
+                  - /placeholder: note-1
+              - generic [ref=e209]:
+                - generic [ref=e210]: 추가할 class
+                - textbox "추가할 class" [ref=e211]:
+                  - /placeholder: note highlight
+              - generic [ref=e212]:
+                - generic [ref=e213]: 추가 위치
+                - combobox "추가 위치" [ref=e214]:
+                  - option "선택 노드의 자식으로" [selected]
+                  - option "선택 노드 앞에"
+                  - option "선택 노드 뒤에"
+            - generic [ref=e215]:
+              - button "선택 위치에 노드 추가" [ref=e216] [cursor=pointer]
+              - button "삭제 초안 만들기" [ref=e217] [cursor=pointer]
+              - button "위로 이동 초안" [ref=e218] [cursor=pointer]
+              - button "아래로 이동 초안" [ref=e219] [cursor=pointer]
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e376]:
+              - strong [ref=e377]: "0"
+              - text: 패치 수
+            - generic [ref=e378]:
+              - strong [ref=e379]: "0"
+              - text: 변경 노드
+            - generic [ref=e380]:
+              - strong [ref=e381]: "19"
+              - text: 전체 렌더 기준
+            - generic [ref=e382]:
+              - strong [ref=e383]: "0"
+              - text: 이동 수
+          - list [ref=e230]:
+            - listitem [ref=e384]: 현재 트리에서 노드를 선택하고 초안을 누적한 뒤, 마지막에 Patch 버튼으로 실제 DOM에 적용해보세요.
+    - generic [ref=e232]:
+      - generic [ref=e233]:
+        - generic [ref=e234]:
+          - paragraph [ref=e235]: 패치 결과
+          - heading "실제 DOM 미리보기" [level=2] [ref=e236]
+        - generic [ref=e237]: document.createElement
+      - paragraph [ref=e238]: 이 영역은 마지막으로 Patch가 적용된 실제 DOM입니다. 초안 상태와 다를 수 있으며, Patch 버튼을 누르기 전까지는 그대로 유지됩니다.
+      - generic [ref=e242]:
+        - generic [ref=e243]:
+          - heading "React 코어 비주얼라이저" [level=1] [ref=e244]
+          - paragraph [ref=e245]: 패치가 실제로 어떤 노드만 바꾸는지 단계별로 추적해보세요.
+        - article [ref=e246]:
+          - heading "Virtual DOM" [level=2] [ref=e247]
+          - paragraph [ref=e248]: 스냅샷을 비교하면 diff와 patch의 흐름을 더 쉽게 이해할 수 있습니다.
+        - list [ref=e249]:
+          - listitem [ref=e250]: 노드를 선택해보세요
+          - listitem [ref=e251]: props나 텍스트를 바꿔보세요
+          - listitem [ref=e252]: 패치 로그를 확인해보세요
+    - generic [ref=e253]:
+      - generic [ref=e254]:
+        - generic [ref=e255]:
+          - paragraph [ref=e256]: 하단 초안 편집기
+          - heading "HTML 초안과 적용 제어" [level=2] [ref=e257]
+        - generic [ref=e258]: 실제 반영은 Patch 버튼으로
+      - generic [ref=e259]:
+        - button "초안을 DOM에 적용" [disabled] [ref=e260]
+        - button "초안 버리기" [disabled] [ref=e261]
+        - button "이전 적용 되돌리기" [disabled] [ref=e262]
+        - button "다시 적용" [disabled] [ref=e263]
+      - textbox "HTML 초안 편집기" [ref=e264]: <section id="lesson-board" class="study-board"> <header class="intro"> <h1>React 코어 비주얼라이저</h1> <p>패치가 실제로 어떤 노드만 바꾸는지 단계별로 추적해보세요.</p> </header> <article class="concept"> <h2>Virtual DOM</h2> <p>스냅샷을 비교하면 diff와 patch의 흐름을 더 쉽게 이해할 수 있습니다.</p> </article> <ul class="steps"> <li>노드를 선택해보세요</li> <li>props나 텍스트를 바꿔보세요</li> <li>패치 로그를 확인해보세요</li> </ul> </section>
+      - paragraph [ref=e265]:
+        - text: 트리 버튼, 노드 편집, 추가, 이동, 삭제는 모두 이 하단 초안 편집기와 같은 draft를 공유합니다. 충분히 누적한 뒤
+        - strong [ref=e266]: 초안을 DOM에 적용
+        - text: 버튼을 눌러 실제 DOM patch를 실행하세요.

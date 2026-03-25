@@ -1,0 +1,268 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: React Internals Studio
+      - heading "Watch a Virtual DOM patch travel through the tree" [level=1] [ref=e6]
+      - paragraph [ref=e7]: "The two SVG trees are the star of the page: select a node in the live tree, use the quick buttons around it, and study how the previous snapshot differs from the current snapshot after every patch."
+    - generic "learning steps" [ref=e8]:
+      - article [ref=e9]:
+        - generic [ref=e10]: "1"
+        - strong [ref=e11]: Select
+        - paragraph [ref=e12]: Click a node in the current tree.
+      - article [ref=e13]:
+        - generic [ref=e14]: "2"
+        - strong [ref=e15]: Edit
+        - paragraph [ref=e16]: Adjust tag, props, and text in the node lab.
+      - article [ref=e17]:
+        - generic [ref=e18]: "3"
+        - strong [ref=e19]: Compare
+        - paragraph [ref=e20]: Read the patch log and diff colors side by side.
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Main Stage
+          - heading "Tree-first workspace" [level=2] [ref=e26]
+        - generic "diff legend" [ref=e27]:
+          - generic [ref=e28]: Changed
+          - generic [ref=e30]: Added
+          - generic [ref=e32]: Removed
+          - generic [ref=e34]: Moved
+      - paragraph [ref=e36]:
+        - text: "In the current tree, the selected node reveals quick action buttons:"
+        - code [ref=e37]: +
+        - text: add child,
+        - code [ref=e38]: "-"
+        - text: delete,
+        - code [ref=e39]: ^
+        - text: move up, and
+        - code [ref=e40]: v
+        - text: move down.
+      - generic [ref=e41]:
+        - article [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - paragraph [ref=e45]: Reference Snapshot
+              - heading "Previous Tree" [level=3] [ref=e46]
+            - generic [ref=e47]: Diff baseline
+          - img "Virtual DOM Tree" [ref=e602]:
+            - generic [ref=e615]:
+              - button "#text \"React Core Visuali\"" [ref=e616]:
+                - generic: "#text"
+                - generic: React Core Vis
+              - button "<h1>" [ref=e618]:
+                - generic: h1
+                - generic: React Core Vis
+              - button "#text \"Trace how a patch \"" [ref=e620]:
+                - generic: "#text"
+                - generic: Trace how a pa
+              - button "<p>" [ref=e622]:
+                - generic: p
+                - generic: Trace how a pa
+              - button "<header.intro>" [ref=e624]:
+                - generic: header
+              - button "#text \"Virtual DOM\"" [ref=e626]:
+                - generic: "#text"
+                - generic: Virtual DOM
+              - button "<h2>" [ref=e628]:
+                - generic: h2
+                - generic: Virtual DOM
+              - button "#text \"Snapshots make dif\"" [ref=e630]:
+                - generic: "#text"
+                - generic: Snapshots make
+              - button "<p>" [ref=e632]:
+                - generic: p
+                - generic: Snapshots make
+              - button "<article.concept>" [ref=e634]:
+                - generic: article
+              - button "#text \"Select a node\"" [ref=e636]:
+                - generic: "#text"
+                - generic: Select a node
+              - button "<li>" [ref=e638]:
+                - generic: li
+                - generic: Select a node
+              - button "#text \"Patch minimal DOM\"" [ref=e640]:
+                - generic: "#text"
+                - generic: Patch minimal
+              - button "#text \"New child note\"" [ref=e642]:
+                - generic: "#text"
+                - generic: New child note
+              - button "<small>" [ref=e644]:
+                - generic: small
+                - generic: New child note
+              - button "<li>" [ref=e646]:
+                - generic: li
+                - generic: Patch minimal
+              - button "#text \"Watch the patch lo\"" [ref=e648]:
+                - generic: "#text"
+                - generic: Watch the patc
+              - button "<li>" [ref=e650]:
+                - generic: li
+                - generic: Watch the patc
+              - button "<ul.steps>" [ref=e652]:
+                - generic: ul
+              - button "<section#lesson-board.study-board>" [ref=e654]:
+                - generic: section
+              - button "<div#playground-root>" [ref=e656]:
+                - generic: div
+        - article [ref=e99]:
+          - generic [ref=e100]:
+            - generic [ref=e101]:
+              - paragraph [ref=e102]: Live Snapshot
+              - heading "Current Tree" [level=3] [ref=e103]
+            - generic [ref=e104]: Current Tree
+          - img "Virtual DOM Tree" [ref=e658]:
+            - generic [ref=e671]:
+              - button "#text \"React Core Visuali\"" [ref=e672]:
+                - generic: "#text"
+                - generic: React Core Vis
+              - button "<h1>" [ref=e674]:
+                - generic: h1
+                - generic: React Core Vis
+              - button "#text \"Trace how a patch \"" [ref=e676]:
+                - generic: "#text"
+                - generic: Trace how a pa
+              - button "<p>" [ref=e678]:
+                - generic: p
+                - generic: Trace how a pa
+              - button "<header.intro>" [ref=e680]:
+                - generic: header
+              - button "#text \"Virtual DOM\"" [ref=e682]:
+                - generic: "#text"
+                - generic: Virtual DOM
+              - button "<h2>" [ref=e684]:
+                - generic: h2
+                - generic: Virtual DOM
+              - button "#text \"Snapshots make dif\"" [ref=e686]:
+                - generic: "#text"
+                - generic: Snapshots make
+              - button "<p>" [ref=e688]:
+                - generic: p
+                - generic: Snapshots make
+              - button "<article.concept>" [ref=e690]:
+                - generic: article
+              - button "#text \"Select a node\"" [ref=e692]:
+                - generic: "#text"
+                - generic: Select a node
+              - button "<li>" [ref=e694]:
+                - generic: li
+                - generic: Select a node
+              - button "#text \"New child note\"" [ref=e696]:
+                - generic: "#text"
+                - generic: New child note
+              - button "<small>" [ref=e698]:
+                - generic: small
+                - generic: New child note
+              - button "#text \"Patch minimal DOM\"" [ref=e700]:
+                - generic: "#text"
+                - generic: Patch minimal
+              - button "<li>" [ref=e702]:
+                - generic: li
+                - generic: Patch minimal
+              - button "#text \"Watch the patch lo\"" [ref=e704]:
+                - generic: "#text"
+                - generic: Watch the patc
+              - button "<li>" [ref=e706]:
+                - generic: li
+                - generic: Watch the patc
+              - button "<ul.steps>" [ref=e708]:
+                - generic: ul
+              - button "<section#lesson-board.study-board>" [ref=e710]:
+                - generic: section
+              - button "<div#playground-root>" [ref=e712]:
+                - generic: div
+            - generic [ref=e714]:
+              - button "Add child" [ref=e715] [cursor=pointer]:
+                - generic: +
+              - button "Delete node" [ref=e717] [cursor=pointer]:
+                - generic: "-"
+              - button "Move up" [ref=e719]:
+                - generic: ^
+              - button "Move down" [ref=e721] [cursor=pointer]:
+                - generic: v
+    - generic [ref=e165]:
+      - generic [ref=e166]:
+        - generic [ref=e167]:
+          - paragraph [ref=e168]: Node Lab
+          - heading "Edit the selected node" [level=2] [ref=e169]
+        - generic [ref=e170]: Applied Patch
+      - generic [ref=e171]:
+        - generic [ref=e172]:
+          - generic [ref=e173]:
+            - paragraph [ref=e174]: Selected Node
+            - paragraph [ref=e175]: <small>
+            - paragraph [ref=e176]: Use the fields below to rename the tag, adjust props, or change the visible text.
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e179]: Tag
+              - textbox "Tag" [ref=e180]:
+                - /placeholder: div
+                - text: small
+            - generic [ref=e181]:
+              - generic [ref=e182]: Direct text
+              - textbox "Direct text" [ref=e183]:
+                - /placeholder: Edit text or child label
+                - text: New child note
+            - generic [ref=e184]:
+              - generic [ref=e185]: id
+              - textbox "id" [ref=e186]:
+                - /placeholder: card-1
+            - generic [ref=e187]:
+              - generic [ref=e188]: class
+              - textbox "class" [ref=e189]:
+                - /placeholder: card accent
+          - generic [ref=e190]:
+            - button "Apply Node Edit" [ref=e191] [cursor=pointer]
+            - button "Add Child" [ref=e192] [cursor=pointer]
+            - button "Delete Node" [ref=e193] [cursor=pointer]
+            - button "Move Up" [disabled] [ref=e194]
+            - button "Move Down" [ref=e195] [cursor=pointer]
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - generic [ref=e723]:
+              - strong [ref=e724]: "1"
+              - text: Patches
+            - generic [ref=e725]:
+              - strong [ref=e726]: "1"
+              - text: Touched
+            - generic [ref=e727]:
+              - strong [ref=e728]: "21"
+              - text: Full Render
+            - generic [ref=e729]:
+              - strong [ref=e730]: "1"
+              - text: Moves
+          - list [ref=e206]:
+            - listitem [ref=e731]: Move <small> from index 1 to 0
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - generic [ref=e210]:
+          - paragraph [ref=e211]: Patched Result
+          - heading "Actual DOM preview" [level=2] [ref=e212]
+        - generic [ref=e213]: document.createElement
+      - paragraph [ref=e214]: This area shows the real DOM after patching. Clicking an element here also selects it.
+      - generic [ref=e218]:
+        - generic [ref=e219]:
+          - heading "React Core Visualizer" [level=1] [ref=e220]
+          - paragraph [ref=e221]: Trace how a patch touches only the nodes that changed.
+        - article [ref=e222]:
+          - heading "Virtual DOM" [level=2] [ref=e223]
+          - paragraph [ref=e224]: Snapshots make diffs easier to reason about.
+        - list [ref=e225]:
+          - listitem [ref=e226]: Select a node
+          - listitem [ref=e227]: New child notePatch minimal DOM
+          - listitem [ref=e228]: Watch the patch log
+    - generic [ref=e229]:
+      - generic [ref=e230]:
+        - generic [ref=e231]:
+          - paragraph [ref=e232]: Bottom Draft Editor
+          - heading "HTML draft and history controls" [level=2] [ref=e233]
+        - generic [ref=e234]: Large rewrites live here
+      - generic [ref=e235]:
+        - button "Patch Draft Into DOM" [ref=e236] [cursor=pointer]
+        - button "Undo" [ref=e237] [cursor=pointer]
+        - button "Redo" [disabled] [ref=e238]
+      - textbox "HTML draft editor" [ref=e239]: <section id="lesson-board" class="study-board"> <header class="intro"> <h1>React Core Visualizer</h1> <p>Trace how a patch touches only the nodes that changed.</p> </header> <article class="concept"> <h2>Virtual DOM</h2> <p>Snapshots make diffs easier to reason about.</p> </article> <ul class="steps"> <li>Select a node</li> <li> <small>New child note</small> Patch minimal DOM </li> <li>Watch the patch log</li> </ul> </section>
+      - paragraph [ref=e240]:
+        - text: This bottom editor is ideal for bigger structural rewrites. While the draft preview is different from the committed tree, quick tree actions pause until you press
+        - strong [ref=e241]: Patch Draft Into DOM
+        - text: .
