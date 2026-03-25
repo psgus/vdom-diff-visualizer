@@ -69,6 +69,31 @@ test("diff reports text updates and sibling moves", function () {
   assert.equal(result.summary.patchCount, 2);
 });
 
+test("diff marks the full subtree as changed when a tag changes", function () {
+  const oldTree = node("root", "div", {}, [
+    node("branch", "section", {}, [
+      node("leaf", "p", {}, [text("leaf-text", "hello")])
+    ])
+  ]);
+  const newTree = node("root", "div", {}, [
+    node("branch", "article", {}, [
+      node("leaf", "p", {}, [text("leaf-text", "hello")])
+    ])
+  ]);
+
+  const result = diff.diff(oldTree, newTree);
+
+  assert.equal(result.patches.length, 1);
+  assert.equal(result.patches[0].op, "REPLACE");
+  assert.equal(result.oldStatusByUid.branch, "changed");
+  assert.equal(result.oldStatusByUid.leaf, "changed");
+  assert.equal(result.oldStatusByUid["leaf-text"], "changed");
+  assert.equal(result.newStatusByUid.branch, "changed");
+  assert.equal(result.newStatusByUid.leaf, "changed");
+  assert.equal(result.newStatusByUid["leaf-text"], "changed");
+  assert.equal(result.summary.touchedNodes, 3);
+});
+
 test("history supports undo and redo with cloned snapshots", function () {
   const initialTree = node("root", "div", {}, [node("a", "p", {}, [])]);
   const nextTree = node("root", "div", {}, [node("b", "section", {}, [])]);

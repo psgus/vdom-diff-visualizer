@@ -95,14 +95,32 @@
       }
     }
 
-    function markChanged(oldNode, newNode) {
+    function touchSubtree(vnode) {
+      vdom.walkVNode(vnode, function (node) {
+        touch(node.uid);
+      });
+    }
+
+    function markChanged(oldNode, newNode, options) {
+      const config = options || {};
+
       if (oldNode) {
-        setStatus(oldStatusByUid, oldNode.uid, "changed");
-        touch(oldNode.uid);
+        if (config.markOldSubtree) {
+          markSubtree(oldStatusByUid, oldNode, "changed");
+          touchSubtree(oldNode);
+        } else {
+          setStatus(oldStatusByUid, oldNode.uid, "changed");
+          touch(oldNode.uid);
+        }
       }
       if (newNode) {
-        setStatus(newStatusByUid, newNode.uid, "changed");
-        touch(newNode.uid);
+        if (config.markNewSubtree) {
+          markSubtree(newStatusByUid, newNode, "changed");
+          touchSubtree(newNode);
+        } else {
+          setStatus(newStatusByUid, newNode.uid, "changed");
+          touch(newNode.uid);
+        }
       }
     }
 
@@ -240,9 +258,10 @@
           index: index,
           vnode: vdom.cloneVNode(newNode)
         });
-        markChanged(oldNode, newNode);
-        touch(oldNode.uid);
-        touch(newNode.uid);
+        markChanged(oldNode, newNode, {
+          markOldSubtree: true,
+          markNewSubtree: true
+        });
         return;
       }
 
