@@ -7,13 +7,15 @@ const app = loadModules([
   "vdom.js",
   "diff.js",
   "history.js",
-  "patch.js"
+  "patch.js",
+  "interaction.js"
 ]);
 
 const vdom = app.vdom;
 const diff = app.diff;
 const history = app.history;
 const patch = app.patch;
+const interaction = app.interaction;
 
 function text(uid, value) {
   return {
@@ -82,6 +84,25 @@ test("history supports undo and redo with cloned snapshots", function () {
   undoTransition.to.children[0].uid = "mutated";
   const redoTransition = history.redo(timeline);
   assert.equal(redoTransition.to.children[0].uid, "b");
+});
+
+test("interaction.reorderNode reorders siblings around a target node", function () {
+  const tree = node("root", "div", {}, [
+    node("a", "p", {}, []),
+    node("b", "p", {}, []),
+    node("c", "p", {}, [])
+  ]);
+
+  const result = interaction.reorderNode(tree, "a", "c", "after");
+
+  assert.ok(result);
+  assert.deepEqual(
+    result.tree.children.map(function (child) {
+      return child.uid;
+    }),
+    ["b", "c", "a"]
+  );
+  assert.equal(result.selectedUid, "a");
 });
 
 test("patch.describeOperation returns readable descriptions", function () {

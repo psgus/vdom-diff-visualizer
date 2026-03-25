@@ -641,6 +641,14 @@ textarea {
   filter: drop-shadow(0 8px 12px rgba(28, 37, 56, 0.08));
 }
 
+.tree-node.is-draggable {
+  cursor: grab;
+}
+
+.tree-node.is-dragging {
+  opacity: 0.72;
+}
+
 .tree-node.is-ghost {
   opacity: 0.64;
 }
@@ -674,6 +682,20 @@ textarea {
 
 .tree-node.status-moved .tree-node-circle {
   fill: var(--move);
+}
+
+.tree-node.drop-before .tree-node-circle,
+.tree-node.drop-after .tree-node-circle {
+  stroke: #4b4bd8;
+  stroke-width: 5;
+}
+
+.tree-node.drop-before .tree-node-circle {
+  filter: drop-shadow(-10px 0 0 rgba(75, 75, 216, 0.22));
+}
+
+.tree-node.drop-after .tree-node-circle {
+  filter: drop-shadow(10px 0 0 rgba(75, 75, 216, 0.22));
 }
 
 .tree-label,

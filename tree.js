@@ -168,6 +168,19 @@
     const onSelect = options.onSelect;
     const quickActions = options.quickActions || [];
     const onAction = options.onAction;
+    const onReorder = options.onReorder;
+    const enableDrag = Boolean(options.enableDrag);
+    const dragState = {
+      pointerId: null,
+      sourceUid: null,
+      sourceGroup: null,
+      currentTargetUid: null,
+      currentPlacement: null,
+      moved: false,
+      startX: 0,
+      startY: 0,
+      suppressClick: false
+    };
 
     container.innerHTML = "";
 
@@ -180,6 +193,7 @@
     }
 
     const layout = computeLayout(tree);
+    const treeIndex = vdom.buildIndex(tree);
     const svg = createSvgElement("svg", {
       viewBox: "0 0 " + layout.width + " " + layout.height,
       role: "img",
@@ -201,33 +215,69 @@
     const nodeLayer = createSvgElement("g");
     layout.nodes.forEach(function (position) {
       const status = statusByUid[position.node.uid] || "unchanged";
+      const isGhost = Boolean(position.node.props && position.node.props.__ghost);
       const group = createSvgElement("g", {
         class: [
           "tree-node",
-          position.node.props && position.node.props.__ghost ? "is-ghost" : "",
+          isGhost ? "is-ghost" : "",
           selectedUid === position.node.uid ? "selected" : "",
           status !== "unchanged" ? "status-" + status : ""
         ].join(" ").trim(),
         transform: "translate(" + position.x + " " + position.y + ")",
         tabindex: "0",
         role: "button",
+        "data-uid": position.node.uid,
         "aria-label": vdom.describeVNode(position.node)
       });
+      const meta = treeIndex.get(position.node.uid);
+      const canDrag = enableDrag && !isGhost && meta && meta.parent;
+
+      if (meta && meta.parent) {
+        group.setAttribute("data-parent-uid", meta.parent.uid);
+        group.setAttribute("data-index", String(meta.index));
+      }
+      if (canDrag) {
+        group.classList.add("is-draggable");
+      }
 
       group.addEventListener("click", function () {
-        if (!(position.node.props && position.node.props.__ghost) && typeof onSelect === "function") {
+        if (dragState.suppressClick) {
+          dragState.suppressClick = false;
+          return;
+        }
+
+        if (!isGhost && typeof onSelect === "function") {
           onSelect(position.node.uid);
         }
       });
 
       group.addEventListener("keydown", function (event) {
-        if ((event.key === "Enter" || event.key === " ") && !(position.node.props && position.node.props.__ghost)) {
+        if ((event.key === "Enter" || event.key === " ") && !isGhost) {
           event.preventDefault();
           if (typeof onSelect === "function") {
             onSelect(position.node.uid);
           }
         }
       });
+
+      if (canDrag) {
+        group.addEventListener("pointerdown", function (event) {
+          if (event.button !== 0) {
+            return;
+          }
+
+          dragState.pointerId = event.pointerId;
+          dragState.sourceUid = position.node.uid;
+          dragState.sourceGroup = group;
+          dragState.currentTargetUid = null;
+          dragState.currentPlacement = null;
+          dragState.moved = false;
+          dragState.startX = event.clientX;
+          dragState.startY = event.clientY;
+          dragState.suppressClick = false;
+          group.setPointerCapture(event.pointerId);
+        });
+      }
 
       const circle = createSvgElement("circle", {
         r: 58,
@@ -278,6 +328,89 @@
     svg.appendChild(linkLayer);
     svg.appendChild(nodeLayer);
     renderQuickActions(svg, layout, selectedUid, quickActions, onAction);
+
+    if (enableDrag && typeof onReorder === "function") {
+      function clearDropState() {
+        svg.querySelectorAll(".tree-node.drop-before, .tree-node.drop-after, .tree-node.is-dragging").forEach(function (node) {
+          node.classList.remove("drop-before", "drop-after", "is-dragging");
+        });
+      }
+
+      svg.addEventListener("pointermove", function (event) {
+        if (dragState.pointerId !== event.pointerId || !dragState.sourceGroup) {
+          return;
+        }
+
+        const deltaX = event.clientX - dragState.startX;
+        const deltaY = event.clientY - dragState.startY;
+        if (!dragState.moved && Math.hypot(deltaX, deltaY) < 8) {
+          return;
+        }
+
+        dragState.moved = true;
+        dragState.suppressClick = true;
+        dragState.sourceGroup.classList.add("is-dragging");
+
+        const hovered = document.elementFromPoint(event.clientX, event.clientY);
+        const targetGroup = hovered && hovered.closest ? hovered.closest(".tree-node") : null;
+        clearDropState();
+        dragState.sourceGroup.classList.add("is-dragging");
+
+        if (!targetGroup || targetGroup === dragState.sourceGroup) {
+          dragState.currentTargetUid = null;
+          dragState.currentPlacement = null;
+          return;
+        }
+
+        if (targetGroup.getAttribute("data-parent-uid") !== dragState.sourceGroup.getAttribute("data-parent-uid")) {
+          dragState.currentTargetUid = null;
+          dragState.currentPlacement = null;
+          return;
+        }
+
+        const rect = targetGroup.getBoundingClientRect();
+        const placement = event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+        targetGroup.classList.add(placement === "before" ? "drop-before" : "drop-after");
+        dragState.currentTargetUid = targetGroup.getAttribute("data-uid");
+        dragState.currentPlacement = placement;
+      });
+
+      function finishDrag(event) {
+        if (dragState.pointerId !== event.pointerId || !dragState.sourceGroup) {
+          return;
+        }
+
+        const sourceUid = dragState.sourceUid;
+        const targetUid = dragState.currentTargetUid;
+        const placement = dragState.currentPlacement;
+        const moved = dragState.moved;
+        const sourceGroup = dragState.sourceGroup;
+
+        clearDropState();
+        if (sourceGroup.hasPointerCapture && sourceGroup.hasPointerCapture(event.pointerId)) {
+          sourceGroup.releasePointerCapture(event.pointerId);
+        }
+
+        dragState.pointerId = null;
+        dragState.sourceUid = null;
+        dragState.sourceGroup = null;
+        dragState.currentTargetUid = null;
+        dragState.currentPlacement = null;
+        dragState.moved = false;
+
+        if (moved && sourceUid && targetUid && placement) {
+          onReorder({
+            sourceUid: sourceUid,
+            targetUid: targetUid,
+            placement: placement
+          });
+        }
+      }
+
+      svg.addEventListener("pointerup", finishDrag);
+      svg.addEventListener("pointercancel", finishDrag);
+    }
+
     container.appendChild(svg);
   }
 

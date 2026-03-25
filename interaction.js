@@ -213,6 +213,55 @@
     };
   }
 
+  function reorderNode(tree, sourceUid, targetUid, placement) {
+    const nextTree = vdom.cloneVNode(tree);
+    const sourceMeta = getMeta(nextTree, sourceUid);
+    const targetMeta = getMeta(nextTree, targetUid);
+
+    if (!sourceMeta || !targetMeta || !sourceMeta.parent || !targetMeta.parent) {
+      return null;
+    }
+
+    if (sourceUid === targetUid || sourceMeta.parent.uid !== targetMeta.parent.uid) {
+      return null;
+    }
+
+    if (placement !== "before" && placement !== "after") {
+      return null;
+    }
+
+    const siblings = sourceMeta.parent.children;
+    const movingNode = siblings.splice(sourceMeta.index, 1)[0];
+    let targetIndex = targetMeta.index;
+
+    if (sourceMeta.index < targetMeta.index) {
+      targetIndex -= 1;
+    }
+
+    if (placement === "after") {
+      targetIndex += 1;
+    }
+
+    if (targetIndex < 0) {
+      targetIndex = 0;
+    }
+    if (targetIndex > siblings.length) {
+      targetIndex = siblings.length;
+    }
+
+    if (targetIndex === sourceMeta.index) {
+      siblings.splice(sourceMeta.index, 0, movingNode);
+      return null;
+    }
+
+    siblings.splice(targetIndex, 0, movingNode);
+
+    return {
+      tree: nextTree,
+      selectedUid: sourceUid
+    };
+  }
+
   function getFirstSelectableUid(tree) {
     if (!tree) {
       return null;
@@ -252,6 +301,7 @@
     updateNode: updateNode,
     removeNode: removeNode,
     moveNode: moveNode,
+    reorderNode: reorderNode,
     getFirstSelectableUid: getFirstSelectableUid,
     resolveSelection: resolveSelection
   };

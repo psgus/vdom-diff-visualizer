@@ -583,6 +583,8 @@
       statusByUid: display.rightStatusByUid || {},
       selectedUid: state.selectedUid,
       onSelect: selectNode,
+      enableDrag: true,
+      onReorder: handleTreeReorder,
       quickActions: buildQuickActions(),
       onAction: handleTreeAction
     });
@@ -682,7 +684,7 @@
       } else if (editable.isRoot) {
         refs.actionHelpText.textContent = "You are on the root wrapper. The root itself cannot be edited or removed, but patch state is still tracked here.";
       } else {
-        refs.actionHelpText.textContent = "Edit updates the current selection as a draft. The lower HTML button stages textarea edits into the top workspace, and Patch commits them to the live DOM.";
+        refs.actionHelpText.textContent = "Edit updates the current selection as a draft. You can also drag nodes inside the right tree to reorder siblings before pressing Patch.";
       }
     }
   }
@@ -847,6 +849,26 @@
 
   function handleMove(direction, targetUid) {
     const result = interaction.moveNode(getWorkingTree(), targetUid || state.selectedUid, direction);
+    if (!result) {
+      return;
+    }
+
+    stageTree(result.tree, {
+      selectedUid: result.selectedUid
+    });
+  }
+
+  function handleTreeReorder(detail) {
+    if (!detail || !detail.sourceUid || !detail.targetUid || !detail.placement) {
+      return;
+    }
+
+    const result = interaction.reorderNode(
+      getWorkingTree(),
+      detail.sourceUid,
+      detail.targetUid,
+      detail.placement
+    );
     if (!result) {
       return;
     }
