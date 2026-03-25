@@ -42,6 +42,7 @@
 
   function getRefs() {
     refs.htmlInput = document.getElementById("html-input");
+    refs.htmlPreviewBtn = document.getElementById("html-preview-btn");
     refs.patchBtn = document.getElementById("patch-btn");
     refs.resetDraftBtn = document.getElementById("reset-draft-btn");
     refs.undoBtn = document.getElementById("undo-btn");
@@ -655,10 +656,19 @@
   function renderControls() {
     const editable = getEditableSelection();
     const rootLocked = !editable || editable.isRoot;
+    const workingTree = getWorkingTree();
+    const serializedWorkingTree = workingTree
+      ? vdom.serializeVNodeToHTML(vdom.cloneVNode(workingTree))
+      : "";
+    const htmlDraftDirty = refs.htmlInput.value !== serializedWorkingTree;
+
     refs.patchBtn.disabled = !state.previewDirty;
     refs.resetDraftBtn.disabled = !state.previewDirty;
     refs.undoBtn.disabled = state.previewDirty || !history.canUndo(state.history);
     refs.redoBtn.disabled = state.previewDirty || !history.canRedo(state.history);
+    if (refs.htmlPreviewBtn) {
+      refs.htmlPreviewBtn.disabled = !htmlDraftDirty;
+    }
 
     if (refs.applyNodeBtn) {
       refs.applyNodeBtn.disabled = !editable || rootLocked;
@@ -672,7 +682,7 @@
       } else if (editable.isRoot) {
         refs.actionHelpText.textContent = "You are on the root wrapper. The root itself cannot be edited or removed, but patch state is still tracked here.";
       } else {
-        refs.actionHelpText.textContent = "Edit updates the current selection as a draft. Patch applies the draft to the committed tree and the live DOM.";
+        refs.actionHelpText.textContent = "Edit updates the current selection as a draft. The lower HTML button stages textarea edits into the top workspace, and Patch commits them to the live DOM.";
       }
     }
   }
@@ -745,7 +755,7 @@
     renderAll();
   }
 
-  function previewTextarea() {
+  function handleHtmlPreview() {
     const baseTree = getWorkingTree();
     const draftTree = vdom.reconcileUids(
       baseTree,
@@ -970,7 +980,10 @@
 
     syncTextareaFromTree(committedTree);
 
-    refs.htmlInput.addEventListener("input", previewTextarea);
+    refs.htmlInput.addEventListener("input", renderControls);
+    if (refs.htmlPreviewBtn) {
+      refs.htmlPreviewBtn.addEventListener("click", handleHtmlPreview);
+    }
     refs.patchBtn.addEventListener("click", handlePatch);
     refs.resetDraftBtn.addEventListener("click", handleResetDraft);
     refs.undoBtn.addEventListener("click", handleUndo);

@@ -610,6 +610,27 @@ textarea {
   margin: 14px 0 0;
 }
 
+.html-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+#html-preview-btn {
+  min-width: 220px;
+  background: linear-gradient(180deg, #f1ede4, #e3ddd2);
+  color: #5f6879;
+  border: 1px solid rgba(154, 147, 136, 0.34);
+  box-shadow: 0 8px 18px rgba(120, 113, 101, 0.08);
+}
+
+#html-preview-btn:disabled {
+  background: linear-gradient(180deg, #f1ede4, #e3ddd2);
+  color: rgba(111, 119, 136, 0.48);
+  border-color: rgba(154, 147, 136, 0.24);
+  opacity: 1;
+}
+
 .tree-link {
   stroke: rgba(86, 98, 120, 0.24);
   stroke-width: 2.3;
