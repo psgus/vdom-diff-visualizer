@@ -47,6 +47,7 @@
     refs.undoBtn = document.getElementById("undo-btn");
     refs.redoBtn = document.getElementById("redo-btn");
     refs.applyNodeBtn = document.getElementById("apply-node-btn");
+    refs.actionHelpText = document.getElementById("action-help-text");
     refs.selectionLabel = document.getElementById("selection-label");
     refs.selectionMeta = document.getElementById("selection-meta");
     refs.nodeFormDialog = document.getElementById("node-form-dialog");
@@ -189,6 +190,8 @@
     const rightTree = vdom.cloneVNode(newTree);
     const leftIndex = vdom.buildIndex(leftTree);
     const rightIndex = vdom.buildIndex(rightTree);
+    const originalOldIndex = oldTree ? vdom.buildIndex(oldTree) : new Map();
+    const originalNewIndex = newTree ? vdom.buildIndex(newTree) : new Map();
     const leftStatusByUid = Object.assign({}, diffResult.oldStatusByUid || {});
     const rightStatusByUid = Object.assign({}, diffResult.newStatusByUid || {});
 
@@ -218,6 +221,29 @@
         vdom.walkVNode(ghostNode, function (node) {
           rightStatusByUid[node.uid] = "removed";
         });
+      }
+
+      if (op.op === "MOVE") {
+        const leftParentEntry = leftIndex.get(op.parentUid);
+        const rightParentEntry = rightIndex.get(op.parentUid);
+        const oldEntry = originalOldIndex.get(op.uid);
+        const newEntry = originalNewIndex.get(op.uid);
+
+        if (leftParentEntry && newEntry) {
+          const moveGhostOnLeft = cloneGhostSubtree(newEntry.node, "ghost-move-target");
+          insertChildAt(leftParentEntry.node, op.toIndex, moveGhostOnLeft);
+          vdom.walkVNode(moveGhostOnLeft, function (node) {
+            leftStatusByUid[node.uid] = "moved";
+          });
+        }
+
+        if (rightParentEntry && oldEntry) {
+          const moveGhostOnRight = cloneGhostSubtree(oldEntry.node, "ghost-move-origin");
+          insertChildAt(rightParentEntry.node, op.fromIndex, moveGhostOnRight);
+          vdom.walkVNode(moveGhostOnRight, function (node) {
+            rightStatusByUid[node.uid] = "moved";
+          });
+        }
       }
     });
 
@@ -628,7 +654,6 @@
 
   function renderControls() {
     const editable = getEditableSelection();
-    const meta = getSelectedMetaFromWorking();
     const rootLocked = !editable || editable.isRoot;
     refs.patchBtn.disabled = !state.previewDirty;
     refs.resetDraftBtn.disabled = !state.previewDirty;
@@ -637,6 +662,18 @@
 
     if (refs.applyNodeBtn) {
       refs.applyNodeBtn.disabled = !editable || rootLocked;
+    }
+
+    if (refs.actionHelpText) {
+      if (!editable) {
+        refs.actionHelpText.textContent = "Select a node first. Use this panel to edit the current selection, then patch or reset the draft.";
+      } else if (editable.isText) {
+        refs.actionHelpText.textContent = "This is a text node. You can edit its content here, then patch the draft when you are ready.";
+      } else if (editable.isRoot) {
+        refs.actionHelpText.textContent = "You are on the root wrapper. The root itself cannot be edited or removed, but patch state is still tracked here.";
+      } else {
+        refs.actionHelpText.textContent = "Edit updates the current selection as a draft. Patch applies the draft to the committed tree and the live DOM.";
+      }
     }
   }
 

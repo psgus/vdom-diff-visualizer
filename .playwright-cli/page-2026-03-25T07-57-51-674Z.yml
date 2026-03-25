@@ -1,0 +1,362 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "VDOM Studio home" [ref=e4] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e5]: VS
+    - navigation "Primary" [ref=e6]:
+      - link "제품 소개" [ref=e7] [cursor=pointer]:
+        - /url: "#workspace"
+      - link "학습 흐름" [ref=e8] [cursor=pointer]:
+        - /url: "#journey"
+      - link "기능 요약" [ref=e9] [cursor=pointer]:
+        - /url: "#lab"
+      - link "문서" [ref=e10] [cursor=pointer]:
+        - /url: "#footer"
+      - link "시작하기" [ref=e11] [cursor=pointer]:
+        - /url: "#workspace"
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - paragraph [ref=e15]: React Internal Monitor
+        - heading "Make virtual DOM feel obvious." [level=1] [ref=e16]:
+          - text: Make virtual DOM
+          - generic [ref=e17]: feel obvious.
+        - paragraph [ref=e18]: 복잡한 렌더링 흐름을 한 화면에서 이해할 수 있도록, 트리 변경과 실제 DOM 반영 과정을 차분하고 명확하게 보여주는 VDOM 스튜디오입니다.
+        - generic [ref=e19]:
+          - link "바로 시작하기" [ref=e20] [cursor=pointer]:
+            - /url: "#workspace"
+          - link "더 알아보기 ->" [ref=e21] [cursor=pointer]:
+            - /url: "#journey"
+        - generic "Workspace summary" [ref=e22]:
+          - article [ref=e23]:
+            - text: Selected Node
+            - strong [ref=e24]: <section#lesson...
+            - text: You are focused on the current committed context.
+          - article [ref=e25]:
+            - text: Editing Mode
+            - strong [ref=e26]: Committed
+            - text: Only committed states can be undone or redone.
+          - article [ref=e27]:
+            - text: Pending Patches
+            - strong [ref=e28]: "0"
+            - text: No staged changes right now.
+          - article [ref=e29]:
+            - text: Live DOM
+            - strong [ref=e30]: Synced
+            - text: The live DOM matches the latest committed patch.
+      - generic [ref=e38]: Live Workspace
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - heading "Start with clarity." [level=2] [ref=e41]
+        - paragraph [ref=e42]: 초안 편집, 비교 기준 트리, 패치 적용, 실제 DOM 미리보기까지. 렌더링 학습에 필요한 흐름을 한 번에 이어서 확인할 수 있습니다.
+      - generic [ref=e43]:
+        - article [ref=e44]:
+          - generic [ref=e45]: "01"
+          - heading "Draft first." [level=3] [ref=e46]
+          - paragraph [ref=e47]: 현재 트리를 바로 바꾸지 않고 초안 상태로 먼저 쌓아두며 변경 의도를 분리합니다.
+        - article [ref=e48]:
+          - generic [ref=e49]: "02"
+          - heading "Compare clearly." [level=3] [ref=e50]
+          - paragraph [ref=e51]: 이전 트리와 현재 트리를 함께 보고 diff와 patch가 무엇을 의미하는지 즉시 이해합니다.
+        - article [ref=e52]:
+          - generic [ref=e53]: "03"
+          - heading "Ship confidently." [level=3] [ref=e54]
+          - paragraph [ref=e55]: 패치 수, 이동 수, 실제 DOM 반영 결과까지 연결해서 렌더링 비용을 감각적으로 익힙니다.
+      - link "지금 워크스페이스 열기 ->" [ref=e56] [cursor=pointer]:
+        - /url: "#workspace"
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: Interactive Lab
+          - heading "One screen. Full flow." [level=2] [ref=e61]
+          - paragraph [ref=e62]: 트리 편집부터 실제 DOM 반영까지, VDOM 학습에서 헷갈리기 쉬운 단계들을 한 눈에 읽히는 카드 구조로 정리했습니다.
+        - generic [ref=e63]:
+          - article [ref=e64]:
+            - heading "Draft Editing" [level=3] [ref=e65]
+            - paragraph [ref=e66]: 변경은 먼저 draft 상태로 유지해 실제 반영과 분리합니다.
+          - article [ref=e67]:
+            - heading "Visual Diff" [level=3] [ref=e68]
+            - paragraph [ref=e69]: 추가, 삭제, 이동, 변경 상태를 눈에 띄는 시각 구분으로 보여줍니다.
+          - article [ref=e70]:
+            - heading "Patch Summary" [level=3] [ref=e71]
+            - paragraph [ref=e72]: 패치 수와 영향 범위를 요약해 변경 비용을 빠르게 파악할 수 있습니다.
+          - article [ref=e73]:
+            - heading "Live DOM" [level=3] [ref=e74]
+            - paragraph [ref=e75]: 실제 DOM은 Patch 시점에만 바뀌도록 분리해 흐름을 더 명확하게 이해합니다.
+      - complementary [ref=e76]:
+        - generic [ref=e77]:
+          - generic [ref=e78]: VS
+          - strong [ref=e79]: VDOM Studio
+        - paragraph [ref=e80]: 트리 편집, 패치 적용, DOM 반영 과정을 한 화면에서 살펴보는 학습형 워크스페이스입니다.
+        - generic [ref=e81]:
+          - generic [ref=e82]: Tree Editing
+          - generic [ref=e83]: Patch Summary
+          - generic [ref=e84]: Live DOM Sync
+        - link "워크스페이스 열기" [ref=e85] [cursor=pointer]:
+          - /url: "#workspace-shell"
+    - generic [ref=e86]:
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - paragraph [ref=e90]: Main Stage
+            - heading "The deliberate tree workspace" [level=2] [ref=e91]
+          - generic "diff legend" [ref=e92]:
+            - generic [ref=e93]: Changed
+            - generic [ref=e95]: Added
+            - generic [ref=e97]: Removed
+            - generic [ref=e99]: Moved
+        - paragraph [ref=e101]: Work in the current tree first. Quick actions let you add, remove, and reorder nodes before anything touches the committed baseline or live DOM.
+        - region "Current diff summary" [ref=e102]:
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - paragraph [ref=e105]: Patch Summary Board
+              - heading "Current comparison snapshot" [level=3] [ref=e106]
+            - generic [ref=e107]: Applied patches
+          - generic [ref=e108]:
+            - article [ref=e109]:
+              - strong [ref=e110]: "0"
+              - generic [ref=e111]: Patch Count
+              - generic [ref=e112]: No patch operations waiting.
+            - article [ref=e113]:
+              - strong [ref=e114]: "0"
+              - generic [ref=e115]: Touched Nodes
+              - generic [ref=e116]: No nodes are affected.
+            - article [ref=e117]:
+              - strong [ref=e118]: "0"
+              - generic [ref=e119]: Rendered Nodes
+              - generic [ref=e120]: Moves and prop updates can keep this at zero.
+            - article [ref=e121]:
+              - strong [ref=e122]: "19"
+              - generic [ref=e123]: Full Render Baseline
+              - generic [ref=e124]: How many nodes a full redraw would touch.
+            - article [ref=e125]:
+              - strong [ref=e126]: "0"
+              - generic [ref=e127]: Moves
+              - generic [ref=e128]: No reorder operations were found.
+        - region "Current work area" [ref=e129]:
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - paragraph [ref=e132]: Current Selection
+              - heading "<section#lesson-board.study-board>" [level=3] [ref=e133]
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - paragraph [ref=e136]: Commit View
+                - generic [ref=e137]: No Draft
+              - paragraph [ref=e138]: Use Edit for tag, text, and class updates. Use the quick action controls on the tree for add, remove, and move operations.
+              - list [ref=e139]:
+                - listitem [ref=e140]: No pending draft changes.
+                - listitem [ref=e141]: The baseline stays unchanged until Patch is pressed.
+          - generic [ref=e142]:
+            - button "Edit" [ref=e143] [cursor=pointer]
+            - button "Patch" [disabled] [ref=e144]
+            - button "Reset Draft" [disabled] [ref=e145]
+            - button "Undo" [disabled] [ref=e146]
+            - button "Redo" [disabled] [ref=e147]
+        - generic [ref=e148]:
+          - article [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - paragraph [ref=e152]: Comparison Baseline
+                - heading "Previous tree" [level=3] [ref=e153]
+              - generic [ref=e154]: Updated after Patch
+            - img "Virtual DOM 트리" [ref=e156]:
+              - generic [ref=e167]:
+                - button "#text \"Authentic VDOM Stu\"" [ref=e168] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Authentic VDOM
+                - button "<h1>" [ref=e170] [cursor=pointer]:
+                  - generic: h1
+                  - generic: Authentic VDOM
+                - button "#text \"Trace how focused \"" [ref=e172] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Trace how focu
+                - button "<p>" [ref=e174] [cursor=pointer]:
+                  - generic: p
+                  - generic: Trace how focu
+                - button "<header.intro>" [ref=e176] [cursor=pointer]:
+                  - generic: header
+                - button "#text \"Virtual DOM\"" [ref=e178] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Virtual DOM
+                - button "<h2>" [ref=e180] [cursor=pointer]:
+                  - generic: h2
+                  - generic: Virtual DOM
+                - button "#text \"Compare the previo\"" [ref=e182] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Compare the pr
+                - button "<p>" [ref=e184] [cursor=pointer]:
+                  - generic: p
+                  - generic: Compare the pr
+                - button "<article.concept>" [ref=e186] [cursor=pointer]:
+                  - generic: article
+                - button "#text \"Select a node\"" [ref=e188] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Select a node
+                - button "<li>" [ref=e190] [cursor=pointer]:
+                  - generic: li
+                  - generic: Select a node
+                - button "#text \"Change props or te\"" [ref=e192] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Change props o
+                - button "<li>" [ref=e194] [cursor=pointer]:
+                  - generic: li
+                  - generic: Change props o
+                - button "#text \"Review the patch s\"" [ref=e196] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Review the pat
+                - button "<li>" [ref=e198] [cursor=pointer]:
+                  - generic: li
+                  - generic: Review the pat
+                - button "<ul.steps>" [ref=e200] [cursor=pointer]:
+                  - generic: ul
+                - button "<section#lesson-board.study-board>" [ref=e202] [cursor=pointer]:
+                  - generic: section
+                - button "<div#playground-root>" [ref=e204] [cursor=pointer]:
+                  - generic: div
+          - article [ref=e206]:
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - paragraph [ref=e209]: Working Tree
+                - heading "Current tree" [level=3] [ref=e210]
+              - generic [ref=e211]: Committed State
+            - img "Virtual DOM 트리" [ref=e213]:
+              - generic [ref=e224]:
+                - button "#text \"Authentic VDOM Stu\"" [ref=e225] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Authentic VDOM
+                - button "<h1>" [ref=e227] [cursor=pointer]:
+                  - generic: h1
+                  - generic: Authentic VDOM
+                - button "#text \"Trace how focused \"" [ref=e229] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Trace how focu
+                - button "<p>" [ref=e231] [cursor=pointer]:
+                  - generic: p
+                  - generic: Trace how focu
+                - button "<header.intro>" [ref=e233] [cursor=pointer]:
+                  - generic: header
+                - button "#text \"Virtual DOM\"" [ref=e235] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Virtual DOM
+                - button "<h2>" [ref=e237] [cursor=pointer]:
+                  - generic: h2
+                  - generic: Virtual DOM
+                - button "#text \"Compare the previo\"" [ref=e239] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Compare the pr
+                - button "<p>" [ref=e241] [cursor=pointer]:
+                  - generic: p
+                  - generic: Compare the pr
+                - button "<article.concept>" [ref=e243] [cursor=pointer]:
+                  - generic: article
+                - button "#text \"Select a node\"" [ref=e245] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Select a node
+                - button "<li>" [ref=e247] [cursor=pointer]:
+                  - generic: li
+                  - generic: Select a node
+                - button "#text \"Change props or te\"" [ref=e249] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Change props o
+                - button "<li>" [ref=e251] [cursor=pointer]:
+                  - generic: li
+                  - generic: Change props o
+                - button "#text \"Review the patch s\"" [ref=e253] [cursor=pointer]:
+                  - generic: "#text"
+                  - generic: Review the pat
+                - button "<li>" [ref=e255] [cursor=pointer]:
+                  - generic: li
+                  - generic: Review the pat
+                - button "<ul.steps>" [ref=e257] [cursor=pointer]:
+                  - generic: ul
+                - button "<section#lesson-board.study-board>" [ref=e259] [cursor=pointer]:
+                  - generic: section
+                - button "<div#playground-root>" [ref=e261] [cursor=pointer]:
+                  - generic: div
+              - generic [ref=e263]:
+                - button "Add child draft" [ref=e264]:
+                  - generic: +
+                - button "Remove draft" [ref=e266]:
+                  - generic: "-"
+                - button "Move up draft" [ref=e268]:
+                  - generic: ^
+                - button "Move down draft" [ref=e270]:
+                  - generic: v
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - paragraph [ref=e275]: Patch Result
+            - heading "Live DOM preview" [level=2] [ref=e276]
+          - generic [ref=e277]: document.createElement
+        - paragraph [ref=e278]: This panel only reflects the most recently patched state. Draft edits can change freely without mutating the live DOM until you confirm them.
+        - generic [ref=e282]:
+          - generic [ref=e283]:
+            - heading "Authentic VDOM Studio" [level=1] [ref=e284]
+            - paragraph [ref=e285]: Trace how focused edits become measurable patch operations.
+          - article [ref=e286]:
+            - heading "Virtual DOM" [level=2] [ref=e287]
+            - paragraph [ref=e288]: Compare the previous tree and the working tree to understand diff and patch behavior with clarity.
+          - list [ref=e289]:
+            - listitem [ref=e290]: Select a node
+            - listitem [ref=e291]: Change props or text
+            - listitem [ref=e292]: Review the patch summary
+      - generic [ref=e293]:
+        - generic [ref=e294]:
+          - generic [ref=e295]:
+            - paragraph [ref=e296]: HTML Draft Editor
+            - heading "Manual editing and commit order" [level=2] [ref=e297]
+          - generic [ref=e298]: Patch is the real checkpoint
+        - textbox "HTML draft editor" [ref=e299]: <section id="lesson-board" class="study-board" data-key="key-n-2"> <header class="intro" data-key="key-n-3"> <h1 data-key="key-n-4">Authentic VDOM Studio</h1> <p data-key="key-n-6">Trace how focused edits become measurable patch operations.</p> </header> <article class="concept" data-key="key-n-8"> <h2 data-key="key-n-9">Virtual DOM</h2> <p data-key="key-n-11">Compare the previous tree and the working tree to understand diff and patch behavior with clarity.</p> </article> <ul class="steps" data-key="key-n-13"> <li data-key="key-n-14">Select a node</li> <li data-key="key-n-16">Change props or text</li> <li data-key="key-n-18">Review the patch summary</li> </ul> </section>
+        - paragraph [ref=e300]: Use this lower editor for direct HTML drafting. It stays connected to the tree workflow, so your draft still becomes real only when Patch is applied.
+  - contentinfo [ref=e301]:
+    - generic [ref=e302]:
+      - generic [ref=e303]: VS
+      - strong [ref=e304]: Build clearly.
+    - generic [ref=e305]:
+      - paragraph [ref=e306]: We Believe
+      - blockquote [ref=e307]: "\"The clearest way to learn rendering is to see every state transition in context.\""
+    - generic [ref=e308]:
+      - generic [ref=e309]:
+        - paragraph [ref=e310]: About
+        - link "Top" [ref=e311] [cursor=pointer]:
+          - /url: "#top"
+        - link "Journey" [ref=e312] [cursor=pointer]:
+          - /url: "#journey"
+        - link "Overview" [ref=e313] [cursor=pointer]:
+          - /url: "#lab"
+        - link "Docs" [ref=e314] [cursor=pointer]:
+          - /url: "#footer"
+      - generic [ref=e315]:
+        - paragraph [ref=e316]: Services
+        - link "Tree Editing" [ref=e317] [cursor=pointer]:
+          - /url: "#workspace"
+        - link "DOM Preview" [ref=e318] [cursor=pointer]:
+          - /url: "#workspace"
+        - link "Patch Review" [ref=e319] [cursor=pointer]:
+          - /url: "#workspace"
+        - link "Get in Touch" [ref=e320] [cursor=pointer]:
+          - /url: "#workspace"
+      - generic [ref=e321]:
+        - paragraph [ref=e322]: Resources
+        - link "Workspace" [ref=e323] [cursor=pointer]:
+          - /url: "#workspace"
+        - link "Visual Trees" [ref=e324] [cursor=pointer]:
+          - /url: "#workspace-shell"
+        - link "Tutorials" [ref=e325] [cursor=pointer]:
+          - /url: "#workspace-shell"
+        - link "Daily Reads" [ref=e326] [cursor=pointer]:
+          - /url: "#workspace-shell"
+      - generic [ref=e327]:
+        - paragraph [ref=e328]: Connect
+        - link "Behance" [ref=e329] [cursor=pointer]:
+          - /url: "#top"
+        - link "Instagram" [ref=e330] [cursor=pointer]:
+          - /url: "#top"
+        - link "X" [ref=e331] [cursor=pointer]:
+          - /url: "#top"
+        - link "GitHub" [ref=e332] [cursor=pointer]:
+          - /url: "#top"
+    - generic [ref=e333]:
+      - generic [ref=e334]: © 2026 · All rights reserved
+      - generic [ref=e335]: Terms of Service
+      - generic [ref=e336]: Privacy Policy
