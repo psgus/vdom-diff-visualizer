@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>innerHTML vs Fragment vs V-DOM</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f6f8;
+      color: #222;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 340px 1fr 360px;
+      gap: 14px;
+      padding: 14px;
+      min-height: 100vh;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    h1, h2 {
+      margin: 0 0 12px;
+    }
+    .small {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+    }
+    .controls {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 9px;
+      background: #222;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover { opacity: 0.93; }
+    .danger { background: #d84b4b; }
+    .good { background: #1677ff; }
+    .sub { background: #555; }
+
+    .status, .reason, .metric {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .status {
+      background: #eef6ff;
+      white-space: pre-line;
+    }
+    .reason {
+      background: #fff7e8;
+      border: 1px solid #f3d59a;
+    }
+    .metric {
+      background: #f4f5f7;
+      border: 1px solid #e1e4e8;
+    }
+
+    .root {
+      height: 80vh;
+      overflow: auto;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfcfc;
+    }
+    .item {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      background: #f0f0f0;
+      border: 1px solid #e2e2e2;
+    }
+    .item.changed {
+      background: #fff4dd;
+      border-color: #ffb020;
+    }
+    .item strong {
+      display: inline-block;
+      min-width: 90px;
+    }
+
+    .log {
+      height: 80vh;
+      overflow: auto;
+      background: #111;
+      color: #d2ffd2;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .mono {
+      font-family: Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <h1>DOM 비교 데모</h1>
+      <div class="small">
+        innerHTML과 Fragment를 먼저 비교하고,
+        마지막에 왜 V-DOM이 필요한지까지 이어지는 데모입니다.
+      </div>
+
+      <div class="controls">
+        <button class="danger" onclick="renderInnerHTMLBad()">1) innerHTML bad</button>
+        <button onclick="renderInnerHTMLGood()">2) innerHTML good</button>
+        <button onclick="renderFragment()">3) Fragment</button>
+        <button class="good" onclick="renderVDOM()">4) V-DOM</button>
+
+        <button class="sub" onclick="updateOne()">데이터 1개 수정</button>
+        <button class="sub" onclick="updateMany()">데이터 여러 개 수정</button>
+        <button class="sub" onclick="shuffleData()">순서 섞기</button>
+        <button class="sub" onclick="addItem()">아이템 추가</button>
+        <button class="sub" onclick="removeLastItem()">마지막 삭제</button>
+
+        <button class="good" onclick="runStoryMode()">발표용 시나리오 실행</button>
+        <button class="good" onclick="resetAll()">초기화</button>
+        <button class="good" onclick="clearLog()">로그 초기화</button>
+      </div>
+
+      <div id="status" class="status"></div>
+      <div id="reason" class="reason"></div>
+      <div id="metric" class="metric"></div>
+    </div>
+
+    <div class="panel">
+      <h2>실제 DOM</h2>
+      <div id="root" class="root"></div>
+    </div>
+
+    <div class="panel">
+      <h2>로그</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    const ITEM_COUNT = 1000;
+
+    const root = document.getElementById("root");
+    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById("status");
+    const reasonEl = document.getElementById("reason");
+    const metricEl = document.getElementById("metric");
+
+    let data = [];
+    let prevVDOM = [];
+    let currentMode = "";
+    let lastChangedIds = [];
+    let lastRenderMs = 0;
+    let lastPatchCount = 0;
+    let lastFullReplace = false;
+
+    function makeInitialData() {
+      return Array.from({ length: ITEM_COUNT }, (_, i) => ({
+        id: i + 1,
+        text: `아이템 ${i + 1}`
+      }));
+    }
+
+    function log(msg) {
+      const now = new Date().toLocaleTimeString();
+      logEl.textContent += `[${now}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logEl.textContent = "";
+      log("로그를 초기화했습니다.");
+    }
+
+    function lightWork() {
+      let x = 0;
+      for (let i = 0; i < 60; i++) {
+        x += i % 7;
+      }
+      return x;
+    }
+
+    function itemHTML(item) {
+      return `
+        <div class="item" data-id="${item.id}">
+          <strong>ID ${item.id}</strong>
+          <span>${item.text}</span>
+        </div>
+      `.trim();
+    }
+
+    function updatePanels(extra = "") {
+      statusEl.textContent =
+`현재 모드: ${currentMode || "없음"}
+데이터 수: ${data.length}
+이전 V-DOM 수: ${prevVDOM.length}
+마지막 렌더 시간: ${lastRenderMs.toFixed(2)}ms
+마지막 patch 개수: ${lastPatchCount}
+전체 교체 여부: ${lastFullReplace ? "예" : "아니오"}
+${extra}`;
+
+      reasonEl.innerHTML = getReasonText();
+      metricEl.innerHTML = `
+        <strong>이번 렌더 해석</strong><br>
+        렌더 시간: <span class="mono">${lastRenderMs.toFixed(2)}ms</span><br>
+        patch 개수: <span class="mono">${lastPatchCount}</span><br>
+        전체 교체: <span class="mono">${lastFullReplace ? "YES" : "NO"}</span><br><br>
+        핵심: <strong>최초 렌더보다 작은 변경이 반복될 때 V-DOM의 의미가 커집니다.</strong>
+      `;
+    }
+
+    function getReasonText() {
+      if (currentMode === "innerHTML BAD") {
+        return `
+          <strong>지금 보여주는 포인트</strong><br>
+          반복문 안에서 <span class="mono">innerHTML +=</span>를 쓰면
+          매번 HTML을 다시 파싱하고 DOM을 다시 건드리게 됩니다.<br><br>
+          즉, <strong>innerHTML 자체보다 사용하는 방식이 더 문제</strong>입니다.
+        `;
+      }
+
+      if (currentMode === "innerHTML GOOD") {
+        return `
+          <strong>지금 보여주는 포인트</strong><br>
+          문자열을 먼저 다 만든 뒤 마지막에 한 번만 넣으면
+          같은 innerHTML이어도 훨씬 덜 비효율적입니다.<br><br>
+          하지만 작은 변경이 생겨도 <strong>전체 HTML을 다시 만드는 흐름</strong>으로 가기 쉽습니다.
+        `;
+      }
+
+      if (currentMode === "Fragment") {
+        return `
+          <strong>지금 보여주는 포인트</strong><br>
+          Fragment는 DOM 노드를 메모리에서 모은 뒤 한 번에 붙입니다.<br><br>
+          즉, <strong>삽입 방식</strong>은 좋아집니다.
+          하지만 무엇이 바뀌었는지 계산해주지는 않습니다.
+        `;
+      }
+
+      if (currentMode === "VDOM") {
+        return `
+          <strong>왜 V-DOM을 도입하나?</strong><br>
+          V-DOM은 “삽입을 어떻게 하냐”보다
+          <strong>업데이트를 어떻게 계산하냐</strong>에 집중합니다.<br><br>
+          이전 상태와 다음 상태를 비교해서
+          <strong>바뀐 부분만 patch</strong>할 수 있다는 점이 핵심입니다.
+        `;
+      }
+
+      return `
+        <strong>데모 순서</strong><br>
+        1. innerHTML bad<br>
+        2. innerHTML good<br>
+        3. Fragment<br>
+        4. V-DOM<br><br>
+        마지막엔 “왜 V-DOM이 필요한가”까지 연결됩니다.
+      `;
+    }
+
+    function markChanged(ids) {
+      const set = new Set(ids);
+      const children = root.children;
+      for (let i = 0; i < children.length; i++) {
+        const id = Number(children[i].dataset.id);
+        if (set.has(id)) children[i].classList.add("changed");
+        else children[i].classList.remove("changed");
+      }
+    }
+
+    let observerAdded = 0;
+    let observerRemoved = 0;
+    let observerScheduled = false;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "childList") {
+          observerAdded += m.addedNodes.length;
+          observerRemoved += m.removedNodes.length;
+        }
+      }
+
+      if (!observerScheduled) {
+        observerScheduled = true;
+        requestAnimationFrame(() => {
+          log(`[Observer] 추가:${observerAdded} 삭제:${observerRemoved}`);
+          observerAdded = 0;
+          observerRemoved = 0;
+          observerScheduled = false;
+        });
+      }
+    });
+
+    observer.observe(root, { childList: true, subtree: true });
+
+    function rerender() {
+      if (currentMode === "innerHTML BAD") renderInnerHTMLBad();
+      else if (currentMode === "innerHTML GOOD") renderInnerHTMLGood();
+      else if (currentMode === "Fragment") renderFragment();
+      else if (currentMode === "VDOM") renderVDOM();
+      else log("먼저 렌더링 방식을 선택하세요.");
+    }
+
+    function renderInnerHTMLBad() {
+      currentMode = "innerHTML BAD";
+      lastPatchCount = 0;
+      lastFullReplace = true;
+
+      const start = performance.now();
+      root.innerHTML = "";
+
+      for (const item of data) {
+        lightWork();
+        root.innerHTML += itemHTML(item);
+      }
+
+      const end = performance.now();
+      lastRenderMs = end - start;
+      log(`[innerHTML BAD] ${lastRenderMs.toFixed(2)}ms`);
+      updatePanels("반복문 안에서 innerHTML += 사용");
+      markChanged(lastChangedIds);
+    }
+
+    function renderInnerHTMLGood() {
+      currentMode = "innerHTML GOOD";
+      lastPatchCount = 0;
+      lastFullReplace = true;
+
+      const start = performance.now();
+      let html = "";
+
+      for (const item of data) {
+        lightWork();
+        html += itemHTML(item);
+      }
+
+      root.innerHTML = html;
+
+      const end = performance.now();
+      lastRenderMs = end - start;
+      log(`[innerHTML GOOD] ${lastRenderMs.toFixed(2)}ms`);
+      updatePanels("문자열을 모아서 마지막에 1번 대입");
+      markChanged(lastChangedIds);
+    }
+
+    function renderFragment() {
+      currentMode = "Fragment";
+      lastPatchCount = 0;
+      lastFullReplace = true;
+
+      const start = performance.now();
+      root.innerHTML = "";
+
+      const frag = document.createDocumentFragment();
+      for (const item of data) {
+        lightWork();
+
+        const div = document.createElement("div");
+        div.className = "item";
+        div.dataset.id = item.id;
+
+        const strong = document.createElement("strong");
+        strong.textContent = `ID ${item.id}`;
+
+        const span = document.createElement("span");
+        span.textContent = item.text;
+
+        div.appendChild(strong);
+        div.appendChild(document.createTextNode(" "));
+        div.appendChild(span);
+
+        frag.appendChild(div);
+      }
+
+      root.appendChild(frag);
+
+      const end = performance.now();
+      lastRenderMs = end - start;
+      log(`[Fragment] ${lastRenderMs.toFixed(2)}ms`);
+      updatePanels("DocumentFragment로 모아서 한 번에 삽입");
+      markChanged(lastChangedIds);
+    }
+
+    function createVDOM(list) {
+      return list.map(item => ({
+        key: item.id,
+        text: item.text
+      }));
+    }
+
+    function renderVDOM() {
+      currentMode = "VDOM";
+      const start = performance.now();
+      const newVDOM = createVDOM(data);
+
+      const needFullRender =
+        prevVDOM.length === 0 ||
+        prevVDOM.length !== newVDOM.length ||
+        prevVDOM.some((node, i) => !newVDOM[i] || node.key !== newVDOM[i].key);
+
+      if (needFullRender) {
+        lastFullReplace = true;
+        lastPatchCount = 0;
+
+        root.innerHTML = "";
+        const frag = document.createDocumentFragment();
+
+        for (const node of newVDOM) {
+          lightWork();
+
+          const div = document.createElement("div");
+          div.className = "item";
+          div.dataset.id = node.key;
+
+          const strong = document.createElement("strong");
+          strong.textContent = `ID ${node.key}`;
+
+          const span = document.createElement("span");
+          span.textContent = node.text;
+
+          div.appendChild(strong);
+          div.appendChild(document.createTextNode(" "));
+          div.appendChild(span);
+          frag.appendChild(div);
+        }
+
+        root.appendChild(frag);
+        log("[VDOM] 전체 재구성");
+      } else {
+        lastFullReplace = false;
+        let patchCount = 0;
+
+        for (let i = 0; i < newVDOM.length; i++) {
+          if (prevVDOM[i].text !== newVDOM[i].text) {
+            const span = root.children[i].querySelector("span");
+            if (span) span.textContent = newVDOM[i].text;
+            patchCount++;
+          }
+        }
+
+        lastPatchCount = patchCount;
+        log(`[VDOM] patch ${patchCount}개`);
+      }
+
+      prevVDOM = newVDOM;
+
+      const end = performance.now();
+      lastRenderMs = end - start;
+      log(`[VDOM] ${lastRenderMs.toFixed(2)}ms`);
+      updatePanels("변경이 작으면 전체를 다시 그리지 않고 patch");
+      markChanged(lastChangedIds);
+    }
+
+    function updateOne() {
+      if (!data.length) return;
+      const idx = Math.floor(Math.random() * data.length);
+      data[idx].text += " 🔥";
+      lastChangedIds = [data[idx].id];
+      rerender();
+    }
+
+    function updateMany() {
+      const changed = [];
+      for (let i = 0; i < data.length; i += 100) {
+        data[i].text += " ✨";
+        changed.push(data[i].id);
+      }
+      lastChangedIds = changed;
+      rerender();
+    }
+
+    function shuffleData() {
+      data = [...data].sort(() => Math.random() - 0.5);
+      lastChangedIds = [];
+      rerender();
+    }
+
+    function addItem() {
+      const nextId = data.length ? Math.max(...data.map(d => d.id)) + 1 : 1;
+      data.push({ id: nextId, text: `아이템 ${nextId}` });
+      lastChangedIds = [nextId];
+      rerender();
+    }
+
+    function removeLastItem() {
+      if (!data.length) return;
+      data.pop();
+      lastChangedIds = [];
+      rerender();
+    }
+
+    function runStoryMode() {
+      resetAll(false);
+      clearLog();
+      log("=== 발표용 시나리오 시작 ===");
+
+      renderInnerHTMLBad();
+
+      setTimeout(() => {
+        log("→ 같은 innerHTML이라도 더 나은 방식으로 바꿔봄");
+        renderInnerHTMLGood();
+      }, 600);
+
+      setTimeout(() => {
+        log("→ 이번엔 삽입을 묶는 Fragment");
+        renderFragment();
+      }, 1200);
+
+      setTimeout(() => {
+        log("→ 여기까지는 삽입 방식 비교");
+        log("→ 이제 업데이트 전략이 필요한 상황으로 감");
+        renderVDOM();
+      }, 1800);
+
+      setTimeout(() => {
+        updateOne();
+        log("→ 작은 변경 1개 발생");
+      }, 2500);
+
+      setTimeout(() => {
+        updateMany();
+        log("→ 여러 개 변경 발생");
+      }, 3200);
+
+      setTimeout(() => {
+        log("=== 발표용 시나리오 종료 ===");
+      }, 3900);
+    }
+
+    function resetAll(writeLog = true) {
+      data = makeInitialData();
+      prevVDOM = [];
+      currentMode = "";
+      lastChangedIds = [];
+      lastRenderMs = 0;
+      lastPatchCount = 0;
+      lastFullReplace = false;
+      root.innerHTML = "";
+      updatePanels("초기화 완료");
+      if (writeLog) log("[RESET] 초기화 완료");
+    }
+
+    resetAll();
+  </script>
+</body>
+</html>

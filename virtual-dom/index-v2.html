@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual DOM & Diff — Camp David Satellite View</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --g-blue:#4285f4;--g-green:#34a853;--g-yellow:#fbbc04;--g-red:#ea4335;
+  --surface:rgba(32,33,36,.85);--surface2:rgba(32,33,36,.92);--surface3:rgba(48,49,52,.9);
+  --text:#e8eaed;--text2:#9aa0a6;--text3:#5f6368;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.12);
+  --radius:8px;--radius-lg:24px;
+  --mono:'Roboto Mono','SF Mono',monospace;
+  --sans:'Google Sans','Roboto',system-ui,sans-serif;
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--sans);background:#1a1a2e;color:var(--text)}
+
+/* ═══ BACKGROUND — dark base only, satellite is inside .ge-map ═══ */
+.earth-bg{
+  position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;
+  background:#0a1208;
+}
+
+/* ═══ TOP BAR — Google Earth Style ═══ */
+.topbar{
+  position:fixed;top:16px;left:16px;right:16px;z-index:50;
+  display:flex;align-items:center;gap:12px;
+}
+.topbar-menu{
+  width:48px;height:48px;border-radius:50%;background:var(--surface2);
+  backdrop-filter:blur(20px);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .2s;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.3);
+}
+.topbar-menu:hover{background:rgba(60,64,67,.9);border-color:var(--border2)}
+.topbar-menu svg{width:20px;height:20px;fill:var(--text)}
+.topbar-search{
+  flex:1;max-width:480px;height:48px;border-radius:var(--radius-lg);
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);display:flex;align-items:center;
+  padding:0 16px;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);
+  transition:all .2s;
+}
+.topbar-search:hover{border-color:var(--border2);background:rgba(40,41,44,.92)}
+.topbar-search .search-icon{font-size:18px;color:var(--text2);flex-shrink:0}
+.topbar-search .search-text{font-size:14px;color:var(--text2);flex:1;font-family:var(--sans);font-weight:400}
+.topbar-search .search-voice{font-size:16px;color:var(--g-blue);cursor:pointer;flex-shrink:0}
+
+/* 우측 컨트롤 그룹 */
+.topbar-controls{
+  display:flex;align-items:center;gap:8px;margin-left:auto;
+}
+.topbar-btn{
+  height:40px;padding:0 16px;border-radius:20px;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);color:var(--text);
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;
+  box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap;
+}
+.topbar-btn:hover:not(:disabled){background:rgba(60,64,67,.9);border-color:var(--border2)}
+.topbar-btn:disabled{opacity:.35;cursor:not-allowed}
+.topbar-btn.btn-patch{background:var(--g-blue);border-color:var(--g-blue);color:#fff;font-weight:600;box-shadow:0 2px 12px rgba(66,133,244,.4)}
+.topbar-btn.btn-patch:hover:not(:disabled){background:#3b78e7}
+.topbar-btn.btn-mask{background:rgba(251,188,4,.14);border-color:rgba(251,188,4,.24);color:#ffe38a}
+.topbar-btn.btn-mask:hover:not(:disabled){background:rgba(251,188,4,.22);border-color:rgba(251,188,4,.34)}
+.topbar-btn.btn-mask.active{background:rgba(52,168,83,.16);border-color:rgba(52,168,83,.28);color:#9ef0a7}
+.topbar-btn.btn-lock{background:rgba(52,168,83,.14);border-color:rgba(52,168,83,.24);color:#9ef0a7}
+.topbar-btn.btn-lock:hover:not(:disabled){background:rgba(52,168,83,.22);border-color:rgba(52,168,83,.36)}
+.topbar-btn.btn-lock.baking{opacity:.7;cursor:wait}
+.topbar-btn.btn-align.active{background:rgba(76,183,255,.16);border-color:rgba(76,183,255,.28);color:#b9e9ff}
+.topbar-state{
+  font-family:var(--mono);font-size:11px;color:var(--text2);
+  padding:8px 14px;border-radius:20px;background:var(--surface2);
+  backdrop-filter:blur(20px);border:1px solid var(--border);
+  box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap;
+}
+
+/* ═══ VIEW TOGGLE (Actual / Test 전환) ═══ */
+.view-tabs{
+  position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:45;
+  display:flex;background:var(--surface2);backdrop-filter:blur(20px);
+  border-radius:20px;border:1px solid var(--border);overflow:hidden;
+  box-shadow:0 2px 10px rgba(0,0,0,.3);
+}
+.view-tab{
+  padding:8px 20px;font-size:12px;font-weight:500;font-family:var(--sans);
+  color:var(--text2);cursor:pointer;transition:all .2s;border:none;background:transparent;
+  display:flex;align-items:center;gap:6px;
+}
+.view-tab.active{color:#fff;background:rgba(66,133,244,.25)}
+.view-tab:hover:not(.active){background:rgba(255,255,255,.05)}
+.view-tab .tab-dot{width:6px;height:6px;border-radius:50%}
+.view-tab .tab-dot.dot-actual{background:var(--g-green)}
+.view-tab .tab-dot.dot-test{background:var(--g-yellow)}
+
+/* ═══ MAP VIEWPORT ═══ */
+.map-viewport{
+  position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;
+}
+.map-ui-layer{
+  position:absolute;inset:0;z-index:44;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .2s
+}
+.map-ui-layer.show{
+  opacity:1;visibility:visible;pointer-events:none
+}
+.map-pane{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  transition:opacity .3s;overflow:hidden;
+}
+.map-pane.hidden{opacity:0;pointer-events:none}
+.map-pane .pane-inner{
+  width:100%;height:100%;padding:0;overflow:hidden;
+  transform-origin:0 0;
+  will-change:transform;
+}
+#test-pane .pane-inner{cursor:default;outline:none}
+
+/* ═══ EDIT TOOLBAR — Floating ═══ */
+.edit-toolbar-float{
+  position:fixed;top:80px;left:16px;z-index:45;
+  display:none;flex-wrap:wrap;gap:4px;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:12px;padding:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:320px;
+}
+.edit-toolbar-float.show{display:flex}
+.etool{
+  padding:6px 10px;font-size:11px;font-weight:500;font-family:var(--sans);
+  border:1px solid var(--border);border-radius:6px;
+  background:rgba(255,255,255,.04);color:var(--text2);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.etool:hover{background:var(--g-blue);color:#fff;border-color:var(--g-blue)}
+.etool.danger:hover{background:var(--g-red);border-color:var(--g-red)}
+
+/* ═══ RIGHT NAV — Compass + Zoom ═══ */
+.right-nav{
+  position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:45;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.compass{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);display:flex;align-items:center;
+  justify-content:center;cursor:pointer;position:relative;
+  box-shadow:0 2px 10px rgba(0,0,0,.3);transition:all .2s;
+}
+.compass:hover{border-color:var(--border2);background:rgba(60,64,67,.9)}
+.compass-n{font-size:10px;font-weight:700;color:var(--g-red);position:absolute;top:4px}
+.compass-needle{width:2px;height:16px;position:relative}
+.compass-needle::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid var(--g-red)}
+.compass-needle::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:8px solid #fff}
+.nav-btn{
+  width:40px;height:40px;border-radius:var(--radius);
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);color:var(--text);font-size:18px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,.3);font-weight:300;
+}
+.nav-btn:hover{background:rgba(60,64,67,.9);border-color:var(--border2)}
+.nav-sep{width:28px;height:1px;background:var(--border)}
+.nav-sv{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-size:18px;color:var(--text2);
+  box-shadow:0 2px 10px rgba(0,0,0,.3);transition:all .2s;
+}
+.nav-sv:hover{border-color:var(--g-yellow);color:var(--g-yellow)}
+
+/* ═══ BOTTOM BAR ═══ */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  font-family:var(--mono);font-size:11px;color:var(--text2);
+}
+.bottom-bar-left{display:flex;gap:20px;align-items:center}
+.bottom-bar-left .coord-item{display:flex;align-items:center;gap:4px}
+.coord-label{color:var(--g-blue);font-weight:600;font-size:10px}
+.bottom-bar-center{font-size:10px;color:var(--text3);letter-spacing:.02em}
+.bottom-bar-right{display:flex;gap:12px;align-items:center;font-size:10px}
+.vdom-status{color:var(--g-green);font-weight:500}
+.bottom-bar-right .scale-bar{display:flex;align-items:center;gap:4px}
+.scale-line{width:50px;height:2px;background:rgba(255,255,255,.4);position:relative}
+.scale-line::before,.scale-line::after{content:'';position:absolute;bottom:0;width:1px;height:6px;background:rgba(255,255,255,.4)}
+.scale-line::before{left:0}
+.scale-line::after{right:0}
+
+/* ═══ DIFF LOG DRAWER ═══ */
+.log-drawer{
+  position:fixed;bottom:28px;left:16px;z-index:42;
+  width:420px;max-height:260px;
+  background:var(--surface2);backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 4px 24px rgba(0,0,0,.4);overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:all .3s;
+}
+.log-drawer.collapsed{max-height:36px}
+.log-drawer-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;border-bottom:1px solid var(--border);
+  cursor:pointer;flex-shrink:0;
+}
+.log-drawer-head h3{font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px}
+.log-drawer-head h3 .log-dot{width:6px;height:6px;border-radius:50%;background:var(--g-blue)}
+.log-drawer-head .log-actions{display:flex;gap:6px}
+.log-drawer-head .log-action-btn{
+  font-size:10px;font-family:var(--sans);padding:3px 8px;border-radius:4px;
+  border:1px solid var(--border);background:transparent;color:var(--text2);
+  cursor:pointer;transition:all .15s;
+}
+.log-drawer-head .log-action-btn:hover{background:rgba(255,255,255,.06)}
+.log-body{
+  flex:1;overflow-y:auto;padding:8px 14px;
+  font-family:var(--mono);font-size:11px;line-height:1.7;
+}
+.log-body::-webkit-scrollbar{width:4px}
+.log-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.log-entry{padding:1px 0;padding-left:8px;border-left:2px solid transparent;margin-bottom:1px}
+.log-time{color:var(--text3);margin-right:6px;font-size:10px}
+.log-info{border-left-color:var(--g-blue);color:var(--text2)}
+.log-create{border-left-color:var(--g-green);color:var(--g-green)}
+.log-remove{border-left-color:var(--g-red);color:var(--g-red)}
+.log-replace{border-left-color:var(--g-yellow);color:var(--g-yellow)}
+.log-update{border-left-color:#4fc3f7;color:#4fc3f7}
+.log-divider{color:var(--text3);text-align:center;border-left-color:transparent;padding:3px 0;font-weight:600;font-size:10px;letter-spacing:.15em}
+
+/* ═══ MASK FOCUS MODE ═══ */
+.mask-focus-hud{
+  position:fixed;
+  left:50%;
+  bottom:28px;
+  z-index:70;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(-50%) translateY(18px);
+  transition:opacity .24s,transform .24s
+}
+.mask-hud-shell{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:12px 16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(18,20,21,.9);
+  backdrop-filter:blur(18px);
+  box-shadow:0 18px 40px rgba(0,0,0,.32)
+}
+.mask-hud-meta{display:flex;flex-direction:column;gap:4px;min-width:200px}
+.mask-hud-kicker{font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--g-green)}
+.mask-hud-status{font-size:13px;font-weight:500;color:#fff;white-space:nowrap}
+.mask-hud-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mask-hud-btn{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  border-radius:999px;
+  padding:9px 14px;
+  font:600 12px var(--sans);
+  cursor:pointer;
+  transition:all .18s
+}
+.mask-hud-btn:hover:not(:disabled){background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18)}
+.mask-hud-btn:disabled{opacity:.34;cursor:not-allowed}
+.mask-hud-btn.primary{background:rgba(52,168,83,.16);border-color:rgba(52,168,83,.25);color:#a8f0b0}
+.mask-hud-btn.patch{background:rgba(66,133,244,.2);border-color:rgba(66,133,244,.28);color:#dce8ff}
+.mask-hud-btn.exit{background:rgba(234,67,53,.12);border-color:rgba(234,67,53,.22);color:#ffc3bc}
+body.mask-focus-mode .mask-focus-hud{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.align-toolbar{
+  position:fixed;
+  top:80px;
+  left:50%;
+  z-index:55;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(18,20,21,.92);
+  backdrop-filter:blur(18px);
+  box-shadow:0 16px 34px rgba(0,0,0,.28);
+  opacity:0;
+  pointer-events:none;
+  visibility:hidden;
+  transform:translateX(-50%) translateY(-8px);
+  transition:opacity .22s,transform .22s,visibility .22s
+}
+.align-toolbar.show{
+  opacity:1;
+  pointer-events:auto;
+  visibility:visible;
+  transform:translateX(-50%) translateY(0)
+}
+.align-toolbar-copy{display:flex;flex-direction:column;gap:3px;min-width:220px}
+.align-toolbar-title{font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#9cd4ff}
+.align-toolbar-desc{font-size:12px;color:#fff;white-space:nowrap}
+.align-toolbar .mask-hud-btn{padding:8px 12px}
+body.mask-focus-mode .topbar,
+body.mask-focus-mode .view-tabs,
+body.mask-focus-mode .edit-toolbar-float,
+body.mask-focus-mode .right-nav,
+body.mask-focus-mode .bottom-bar,
+body.mask-focus-mode .log-drawer,
+body.mask-focus-mode .map-ui-layer{
+  opacity:0;
+  pointer-events:none;
+  visibility:hidden;
+  transform:translateY(-14px)
+}
+body.mask-focus-mode #test-pane .ge-map::before,
+body.mask-focus-mode #test-pane .camo-control,
+body.mask-focus-mode #test-pane .ge-sidebar,
+body.mask-focus-mode #test-pane .ge-info-panel,
+body.mask-focus-mode #test-pane .ge-marker,
+body.mask-focus-mode #test-pane .ge-nav,
+body.mask-focus-mode #test-pane .ge-scale,
+body.mask-focus-mode #test-pane .ge-coords{
+  opacity:0 !important;
+  pointer-events:none !important
+}
+
+/* ═══ GOOGLE EARTH MAP CONTENT (inside panes) ═══ */
+.ge-map{
+  position:relative;width:100%;height:100%;min-height:100vh;
+  border-radius:0;overflow:hidden;
+  background:
+    var(--satellite-image, url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=-77.478,39.643,-77.452,39.657&bboxSR=4326&size=2800,2000&format=png&f=image'))
+    center/cover no-repeat,
+    #0e200a;
+}
+.ge-map::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.008) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.008) 1px, transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:1;
+}
+.ge-logo{display:none;position:absolute;top:12px;left:16px;z-index:2;font-size:13px;font-weight:700;font-family:var(--sans);background:linear-gradient(135deg,#4285f4,#34a853,#fbbc04,#ea4335);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.01em}
+.ge-search{display:none}
+.ge-search-icon{font-size:16px;color:var(--text2)}
+.ge-search-text{font-size:13px;color:var(--text2);flex:1;font-family:var(--sans)}
+.ge-search-voice{font-size:14px;color:var(--g-blue);cursor:pointer}
+.ge-sidebar{position:absolute;top:80px;right:60px;width:200px;z-index:2;display:flex;flex-direction:column;gap:6px}
+.ge-sidebar-card{background:rgba(32,33,36,.88);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:10px;padding:10px}
+.ge-sidebar-card h4{font-size:12px;font-weight:500;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:5px;font-family:var(--sans)}
+.ge-sidebar-card p{font-size:11px;color:var(--text2);line-height:1.5}
+.ge-layers{display:flex;flex-direction:column;gap:3px}
+.ge-layer-item{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;color:var(--text2);font-family:var(--sans)}
+.ge-layer-toggle{width:26px;height:14px;border-radius:7px;position:relative;cursor:pointer;border:1px solid rgba(255,255,255,.12)}
+.ge-layer-toggle.on{background:var(--g-blue);border-color:var(--g-blue)}
+.ge-layer-toggle.off{background:rgba(255,255,255,.08)}
+.ge-layer-toggle::after{content:'';position:absolute;top:2px;width:8px;height:8px;border-radius:50%;background:#fff;transition:left .15s}
+.ge-layer-toggle.on::after{left:14px}
+.ge-layer-toggle.off::after{left:2px}
+.ge-marker{position:absolute;z-index:8;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform .15s}
+.ge-marker:hover{transform:scale(1.15)}
+.ge-marker.layout-dragging,.ge-info-panel.layout-dragging{opacity:.92;z-index:12;cursor:grabbing}
+.ge-marker.label-top{overflow:visible}
+.ge-marker.label-top .ge-pin{position:relative;z-index:1}
+.ge-marker.label-top .ge-marker-label{
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  margin:0;
+  z-index:2
+}
+.ge-pin{width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.ge-pin-inner{transform:rotate(45deg);font-size:10px;font-weight:700;color:#fff;font-family:var(--sans)}
+.ge-pin-red{background:var(--g-red)}
+.ge-pin-blue{background:var(--g-blue)}
+.ge-pin-green{background:var(--g-green)}
+.ge-pin-yellow{background:var(--g-yellow)}
+.ge-marker-label{margin-top:3px;padding:2px 6px;border-radius:3px;background:rgba(0,0,0,.75);color:#fff;font-size:10px;font-weight:500;white-space:nowrap;font-family:var(--sans)}
+.ge-nav{position:absolute;bottom:40px;right:16px;z-index:2;display:flex;flex-direction:column;gap:3px}
+.ge-nav-btn{width:28px;height:28px;border-radius:6px;background:rgba(32,33,36,.88);border:1px solid var(--border);color:var(--text);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:var(--sans)}
+.ge-nav-btn:hover{background:rgba(66,133,244,.3);border-color:var(--g-blue)}
+.ge-coords{position:absolute;bottom:40px;left:16px;z-index:2;background:rgba(32,33,36,.85);padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text2);display:flex;gap:12px}
+.ge-coords span{display:flex;align-items:center;gap:3px}
+.ge-coord-label{color:var(--g-blue);font-weight:600}
+.ge-info-panel{background:rgba(32,33,36,.92);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px;position:relative;z-index:7;max-width:300px}
+.ge-info-panel h3{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px;font-family:var(--sans)}
+.ge-info-panel .ge-info-type{font-size:10px;color:var(--g-blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;font-family:var(--sans)}
+.ge-info-panel p{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px;font-family:var(--sans)}
+.ge-info-tags{display:flex;gap:4px;flex-wrap:wrap}
+.ge-info-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(66,133,244,.1);color:var(--g-blue);border:1px solid rgba(66,133,244,.2);font-family:var(--sans)}
+.ge-info-tag.tag-green{background:rgba(52,168,83,.1);color:var(--g-green);border-color:rgba(52,168,83,.2)}
+.ge-info-tag.tag-yellow{background:rgba(251,188,4,.1);color:var(--g-yellow);border-color:rgba(251,188,4,.2)}
+.ge-info-tag.tag-red{background:rgba(234,67,53,.1);color:var(--g-red);border-color:rgba(234,67,53,.2)}
+.ge-streetview{width:100%;height:48px;border-radius:6px;margin-top:6px;background:linear-gradient(135deg,#1a2a3a 0%,#2a3a4a 50%,#1a2530 100%);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--sans)}
+.ge-streetview:hover{border-color:var(--g-blue);color:var(--g-blue)}
+.ge-scale{position:absolute;bottom:56px;left:16px;z-index:2;display:flex;align-items:flex-end;gap:2px}
+.ge-scale-bar{width:50px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;position:relative}
+.ge-scale-bar::before,.ge-scale-bar::after{content:'';position:absolute;bottom:0;width:1px;height:6px;background:rgba(255,255,255,.4)}
+.ge-scale-bar::before{left:0}
+.ge-scale-bar::after{right:0}
+.ge-scale-text{font-size:9px;color:rgba(255,255,255,.4);margin-left:3px;font-family:var(--mono)}
+.ge-weather{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--border);margin-top:6px}
+.ge-weather-icon{font-size:18px}
+.ge-weather-temp{font-size:14px;font-weight:600;color:var(--text);font-family:var(--sans)}
+.ge-weather-desc{font-size:10px;color:var(--text2);font-family:var(--sans)}
+.ge-timeline{display:flex;align-items:center;gap:5px;padding:5px 0;border-top:1px solid var(--border);margin-top:5px}
+.ge-timeline-dot{width:5px;height:5px;border-radius:50%}
+.ge-timeline-dot.current{background:var(--g-blue);box-shadow:0 0 6px var(--g-blue)}
+.ge-timeline-label{font-size:10px;color:var(--text3);font-family:var(--sans)}
+body.layout-calibrating #actual-pane .ge-marker,
+body.layout-calibrating #actual-pane .ge-info-panel{
+  cursor:grab;
+  user-select:none;
+  box-shadow:0 0 0 1px rgba(52,168,83,.18)
+}
+body.layout-calibrating #actual-pane .ge-marker:hover{transform:none}
+body.layout-calibrating .topbar,
+body.layout-calibrating .view-tabs,
+body.layout-calibrating .edit-toolbar-float,
+body.layout-calibrating .right-nav,
+body.layout-calibrating .bottom-bar,
+body.layout-calibrating .log-drawer,
+body.layout-calibrating .map-ui-layer,
+body.layout-calibrating #actual-pane .ge-sidebar,
+body.layout-calibrating #actual-pane .ge-nav,
+body.layout-calibrating #actual-pane .ge-scale,
+body.layout-calibrating #actual-pane .ge-coords{
+  opacity:0 !important;
+  pointer-events:none !important;
+  visibility:hidden !important;
+  transform:translateY(-10px)
+}
+body.layout-calibrating #actual-pane .ge-map::before{
+  opacity:0 !important
+}
+body.layout-calibrating #actual-pane [data-layout-key]::after{
+  content:'';
+  position:absolute;
+  inset:-6px;
+  border:1px dashed rgba(156,212,255,.35);
+  border-radius:10px;
+  pointer-events:none
+}
+body.layout-calibrating #actual-pane .ge-marker::after{border-radius:16px}
+
+/* ═══ CAMO SELECTION & MASKING ═══ */
+#actual-pane .camo-control,#actual-pane .camo-selection-layer{display:none}
+.camo-selection-layer{
+  position:absolute;
+  inset:0;
+  z-index:9;
+  pointer-events:none
+}
+.camo-lasso-svg{display:block;width:100%;height:100%;overflow:visible}
+.camo-lasso-fill{fill:rgba(251,188,4,.14)}
+.camo-selection-layer.confirmed .camo-lasso-fill{fill:rgba(52,168,83,.16)}
+.camo-lasso-line{
+  fill:none;
+  stroke:rgba(251,188,4,.95);
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 8px rgba(0,0,0,.26))
+}
+.camo-selection-layer.confirmed .camo-lasso-line{stroke:rgba(52,168,83,.96)}
+.camo-lasso-node{
+  fill:rgba(255,255,255,.92);
+  stroke:rgba(0,0,0,.28);
+  stroke-width:1
+}
+.camo-selection-layer.confirmed .camo-lasso-node{fill:rgba(195,255,205,.95)}
+.camo-overlay{
+  position:absolute;
+  z-index:6;
+  overflow:hidden;
+  pointer-events:none;
+  border-radius:8px;
+  box-shadow:0 0 0 1px rgba(13,27,16,.25)
+}
+.camo-overlay-layer{
+  position:absolute;
+  inset:0;
+  z-index:6;
+  pointer-events:none;
+  overflow:hidden
+}
+.camo-overlay::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(20,33,18,.16),rgba(255,255,255,.04) 40%,rgba(12,20,14,.22));
+  mix-blend-mode:multiply
+}
+.camo-overlay.camo-overlay-soft{
+  border-radius:50%;
+  -webkit-mask-image:radial-gradient(circle at center, #000 60%, rgba(0,0,0,.84) 76%, transparent 100%);
+  mask-image:radial-gradient(circle at center, #000 60%, rgba(0,0,0,.84) 76%, transparent 100%)
+}
+.camo-overlay-tile{
+  position:absolute;
+  inset:0;
+  background-size:cover;
+  background-repeat:no-repeat
+}
+.camo-selecting .ge-map{cursor:crosshair !important}
+.camo-selecting #test-pane .pane-inner,.camo-selecting .ge-map{user-select:none}
+.camo-selecting .ge-marker,
+.camo-selecting .ge-info-panel,
+.camo-selecting .ge-sidebar,
+.camo-selecting .ge-nav,
+.camo-selecting .ge-scale,
+.camo-selecting .ge-coords,
+.camo-selecting .edit-toolbar-float,
+.camo-selecting .right-nav,
+.camo-selecting .log-drawer{
+  opacity:0 !important;
+  pointer-events:none !important;
+  visibility:hidden !important
+}
+.camo-selecting .ge-marker,
+.camo-selecting .ge-info-panel,
+.camo-selecting .ge-sidebar,
+.camo-selecting .ge-nav,
+.camo-selecting .ge-scale,
+.camo-selecting .ge-coords{
+  transform:translateY(8px) scale(.98)
+}
+.camo-selecting .camo-control,
+.camo-selecting .ge-streetview{pointer-events:none !important}
+body.camo-workflow-active #test-pane .ge-map::before,
+body.camo-workflow-active #test-pane .ge-marker,
+body.camo-workflow-active #test-pane .ge-info-panel,
+body.camo-workflow-active #test-pane .ge-sidebar,
+body.camo-workflow-active #test-pane .ge-nav,
+body.camo-workflow-active #test-pane .ge-scale,
+body.camo-workflow-active #test-pane .ge-coords{
+  opacity:0 !important;
+  pointer-events:none !important;
+  visibility:hidden !important
+}
+.camo-control{
+  position:absolute;
+  top:80px;
+  left:16px;
+  z-index:5;
+  pointer-events:auto;
+  width:216px;
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(32,33,36,.9);
+  backdrop-filter:blur(14px);
+  box-shadow:0 10px 28px rgba(0,0,0,.38)
+}
+.camo-control h4{font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;font-family:var(--sans);display:flex;align-items:center;gap:6px}
+.camo-status{font-family:var(--mono);font-size:10px;color:var(--text2);background:rgba(0,0,0,.28);padding:6px 8px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
+.camo-status-line{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
+.camo-status-val{color:var(--g-green);font-weight:600}
+.camo-btn-group{display:grid;gap:6px;margin-bottom:8px}
+.camo-btn{
+  appearance:none;
+  width:100%;
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.02em;
+  text-align:left;
+  cursor:pointer;
+  transition:all .18s
+}
+.camo-btn:hover{background:rgba(255,255,255,.1);border-color:var(--border2)}
+.camo-btn.camo-btn-active{background:rgba(251,188,4,.12);border-color:rgba(251,188,4,.26);color:var(--g-yellow)}
+.camo-btn.camo-btn-apply{background:rgba(52,168,83,.12);border-color:rgba(52,168,83,.24);color:var(--g-green)}
+.camo-btn.camo-btn-clear{background:rgba(234,67,53,.09);border-color:rgba(234,67,53,.18);color:#ffb7b0}
+.camo-btn.disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.camo-info{padding:8px 10px;background:rgba(66,133,244,.06);border:1px solid rgba(66,133,244,.12);border-radius:8px;margin-bottom:8px}
+.camo-info.active{background:rgba(52,168,83,.08);border-color:rgba(52,168,83,.18)}
+.camo-hint{font-size:10px;line-height:1.5;color:var(--text3);font-family:var(--sans)}
+.scan-line{display:flex;justify-content:space-between;gap:12px;padding:2px 0;font-family:var(--mono);font-size:10px;color:var(--text2)}
+.scan-val{color:var(--g-yellow);font-weight:600}
+
+/* ═══ SELECTED ELEMENT ═══ */
+.el-selected{outline:2px solid var(--g-blue)!important;outline-offset:2px;position:relative}
+.el-selected::after{content:'';position:absolute;top:-8px;right:-8px;background:var(--g-blue);width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 2px 6px rgba(66,133,244,.5)}
+
+/* ═══ MODALS ═══ */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:rgba(32,33,36,.96);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:16px;padding:24px;min-width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal h3{font-size:16px;margin-bottom:16px;color:var(--g-blue);font-family:var(--sans);font-weight:500}
+.modal-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.modal-row input{flex:1;padding:8px 12px;background:rgba(0,0,0,.3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--mono)}
+.modal-row input:focus{outline:none;border-color:var(--g-blue)}
+.modal-row .del-attr{padding:6px 10px;background:var(--g-red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px}
+.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal-btns .btn{padding:8px 20px;font-size:13px;border-radius:20px;font-family:var(--sans);cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--text)}
+.modal-btns .btn:hover{background:rgba(255,255,255,.05)}
+.modal-btns .btn-save{background:var(--g-blue);border-color:var(--g-blue);color:#fff}
+.modal-btns .btn-save:hover{background:#3b78e7}
+.tag-select{padding:8px 12px;background:rgba(0,0,0,.3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--mono)}
+@media (max-width: 900px){
+  .mask-focus-hud{left:16px;right:16px;bottom:16px;transform:translateY(18px)}
+  body.mask-focus-mode .mask-focus-hud{transform:translateY(0)}
+  .mask-hud-shell{flex-direction:column;align-items:stretch}
+  .mask-hud-meta{min-width:0}
+  .mask-hud-status{white-space:normal}
+}
+</style>
+</head>
+<body>
+
+<!-- 위성 배경 -->
+<div class="earth-bg"></div>
+
+<!-- 상단 바 -->
+<div class="topbar">
+  <div class="topbar-menu">
+    <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+  </div>
+  <div class="topbar-search">
+    <span class="search-icon">&#128269;</span>
+    <span class="search-text">Camp David, Thurmont, MD</span>
+    <span class="search-voice">&#127908;</span>
+  </div>
+  <div class="topbar-controls">
+    <button id="btn-mask-focus" class="topbar-btn btn-mask">Mask Focus</button>
+    <button id="btn-undo" class="topbar-btn" disabled>&#9664; Undo</button>
+    <button id="btn-patch" class="topbar-btn btn-patch">&#9654; Patch</button>
+    <button id="btn-align-layout" class="topbar-btn">Align Names</button>
+    <button id="btn-lock-positions" class="topbar-btn btn-lock" title="localStorage 정렬값을 파일에 영구 반영 후 다운로드">&#128274; Lock In</button>
+    <button id="btn-redo" class="topbar-btn" disabled>Redo &#9654;</button>
+    <span id="history-indicator" class="topbar-state">1 / 1</span>
+  </div>
+</div>
+
+<!-- 뷰 전환 탭 -->
+<div class="view-tabs">
+  <button class="view-tab active" data-pane="actual"><span class="tab-dot dot-actual"></span>Actual DOM</button>
+  <button class="view-tab" data-pane="test"><span class="tab-dot dot-test"></span>Test (Editable)</button>
+</div>
+
+<!-- 편집 도구 (test 모드에서만) -->
+<div class="edit-toolbar-float" id="edit-toolbar">
+  <button class="etool" onclick="toolMoveUp()">&#9650; Up</button>
+  <button class="etool" onclick="toolMoveDown()">&#9660; Down</button>
+  <button class="etool" onclick="toolEditAttrs()">&#9881; Attrs</button>
+  <button class="etool" onclick="toolChangeTag()">&#10092;&#10093; Tag</button>
+  <button class="etool" onclick="toolDuplicate()">&#10697; Clone</button>
+  <button class="etool" onclick="toolAddChild()">+ Child</button>
+  <button class="etool" onclick="toolAddSibling()">+ Sibling</button>
+  <button class="etool" onclick="toolWrapEl()">&#8862; Wrap</button>
+  <button class="etool danger" onclick="toolDelete()">&#10005; Delete</button>
+</div>
+
+<!-- 우측 네비게이션 -->
+<div class="right-nav">
+  <div class="compass"><span class="compass-n">N</span><div class="compass-needle"></div></div>
+  <div class="nav-btn" title="Zoom in" data-map-action="zoom-in">+</div>
+  <div class="nav-btn" title="Zoom out" data-map-action="zoom-out">&minus;</div>
+  <div class="nav-sep"></div>
+  <div class="nav-sv" title="Street View">&#128100;</div>
+</div>
+
+<!-- 지도 뷰포트 -->
+<div class="map-viewport">
+  <div id="actual-pane" class="map-pane"><div class="pane-inner" id="actual-area"></div></div>
+  <div id="test-pane" class="map-pane hidden"><div class="pane-inner" id="test-area" contenteditable="true"></div></div>
+  <div id="test-camo-ui" class="map-ui-layer"></div>
+</div>
+
+<div class="mask-focus-hud" id="mask-focus-hud">
+  <div class="mask-hud-shell">
+    <div class="mask-hud-meta">
+      <span class="mask-hud-kicker">Mask Focus Mode</span>
+      <span class="mask-hud-status" id="mask-hud-status">Satellite view only</span>
+    </div>
+    <div class="mask-hud-actions">
+      <button type="button" class="mask-hud-btn exit" id="mask-hud-exit">Exit</button>
+      <button type="button" class="mask-hud-btn" id="mask-hud-select">Select Area</button>
+      <button type="button" class="mask-hud-btn primary" id="mask-hud-apply">Apply Clone</button>
+      <button type="button" class="mask-hud-btn" id="mask-hud-clear">Clear</button>
+      <button type="button" class="mask-hud-btn patch" id="mask-hud-patch">Patch</button>
+    </div>
+  </div>
+</div>
+
+<div class="align-toolbar" id="align-toolbar">
+  <div class="align-toolbar-copy">
+    <span class="align-toolbar-title">Actual Layout Align</span>
+    <span class="align-toolbar-desc">Drag markers or info cards. Positions autosave on drop.</span>
+  </div>
+  <button type="button" class="mask-hud-btn" id="btn-align-reset">Reset</button>
+  <button type="button" class="mask-hud-btn exit" id="btn-align-done">Done</button>
+</div>
+
+<!-- 하단 상태바 -->
+<div class="bottom-bar">
+  <div class="bottom-bar-left">
+    <div class="coord-item"><span class="coord-label">LAT</span> 39.6480&deg;N</div>
+    <div class="coord-item"><span class="coord-label">LNG</span> 77.4650&deg;W</div>
+    <div class="coord-item"><span class="coord-label">ELEV</span> 549m</div>
+    <div class="coord-item"><span class="coord-label">EYE ALT</span> 1.2km</div>
+  </div>
+  <div class="bottom-bar-center">Imagery &copy;2026 Maxar Technologies &middot; Map data &copy;2026 Google &middot; Catoctin Mountain, Frederick County, MD</div>
+  <div class="bottom-bar-right">
+    <span class="vdom-status">V-DOM Engine Active</span>
+    <div class="scale-bar"><div class="scale-line"></div><span>200m</span></div>
+  </div>
+</div>
+
+<!-- Diff Log 서랍 -->
+<div class="log-drawer" id="log-drawer">
+  <div class="log-drawer-head" onclick="toggleLogDrawer()">
+    <h3><span class="log-dot"></span> Diff Log</h3>
+    <div class="log-actions">
+      <button class="log-action-btn" id="btn-clear" onclick="event.stopPropagation()">Clear</button>
+    </div>
+  </div>
+  <div class="log-body" id="diff-log"></div>
+</div>
+
+<!-- 모달들 -->
+<div class="modal-overlay" id="attr-modal">
+  <div class="modal">
+    <h3>Edit Attributes</h3>
+    <div id="attr-list"></div>
+    <button class="etool" onclick="addAttrRow('','')" style="margin-top:8px">+ Add Attribute</button>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeAttrModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveAttrs()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="tag-modal">
+  <div class="modal">
+    <h3>Change Tag</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Current: <strong id="current-tag-display" style="color:var(--g-blue)"></strong></p>
+    <select id="tag-select" class="tag-select" style="width:100%;padding:10px">
+      <option value="div">div</option><option value="span">span</option><option value="p">p</option>
+      <option value="h1">h1</option><option value="h2">h2</option><option value="h3">h3</option><option value="h4">h4</option>
+      <option value="section">section</option><option value="article">article</option>
+      <option value="ul">ul</option><option value="ol">ol</option><option value="li">li</option>
+      <option value="strong">strong</option><option value="em">em</option><option value="a">a</option>
+      <option value="button">button</option><option value="header">header</option><option value="footer">footer</option><option value="nav">nav</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeTagModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveTagChange()">Change</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ INTERACTIVE CAMO MASKING SYSTEM ═══
+var SAT_EXPORT_BASE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export';
+var SAT_BBOX = '-77.478,39.643,-77.452,39.657';
+var SAT_ASPECT_RATIO = 1.4;
+var SAT_DEFAULT_WIDTH = 2800;
+var SAT_DEFAULT_HEIGHT = 2000;
+var SAT_MAX_WIDTH = 4096;
+var SAT_REFRESH_DEBOUNCE = 160;
+var SAT_URL = SAT_EXPORT_BASE_URL + '?bbox=' + SAT_BBOX + '&bboxSR=4326&size=' + SAT_DEFAULT_WIDTH + ',' + SAT_DEFAULT_HEIGHT + '&format=png&f=image';
+var SAT_NATIVE_SIZE = { width: SAT_DEFAULT_WIDTH, height: SAT_DEFAULT_HEIGHT };
+var CAMO_TRACE_POINT_DISTANCE = 8;
+var CAMO_PATCH_RADIUS = 18;
+var CAMO_SELECTION_ATTR = 'data-camo-selection';
+var CAMO_MASKED_ATTR = 'data-camo-masked';
+var _camoSelectionBound = false;
+var _mapZoomBound = false;
+var _satelliteRefreshTimer = 0;
+var _camoState = {
+  selecting: false,
+  startX: 0, startY: 0,
+  selection: null,
+  overlays: [],
+  masked: false,
+  consumeClick: false
+};
+var _maskFocusState = {
+  active: false
+};
+var _mapViewState = {
+  scale: 1,
+  minScale: 1,
+  maxScale: 4.5,
+  translateX: 0,
+  translateY: 0
+};
+var _satelliteState = {
+  url: SAT_URL,
+  width: SAT_NATIVE_SIZE.width,
+  height: SAT_NATIVE_SIZE.height,
+  requestId: 0
+};
+var LAYOUT_STORAGE_KEY = 'camp-david-layout-v1';
+var _layoutState = {
+  active: false,
+  positions: {},
+  dragging: null
+};
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function formatPercent(value) {
+  return (Math.round(value * 100) / 100).toFixed(2).replace(/\.00$/, '') + '%';
+}
+
+function readLayoutPositions() {
+  try {
+    var raw = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function writeLayoutPositions() {
+  try {
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(_layoutState.positions));
+  } catch (err) {}
+}
+
+function buildSatelliteUrl(width, height) {
+  return SAT_EXPORT_BASE_URL + '?bbox=' + SAT_BBOX + '&bboxSR=4326&size=' + width + ',' + height + '&format=png&f=image';
+}
+
+function getDesiredSatelliteSize(scale) {
+  var canvas = getMapCanvasSize();
+  var deviceScale = Math.min(2, window.devicePixelRatio || 1);
+  var coverWidth = Math.max(canvas.width, canvas.height * SAT_ASPECT_RATIO);
+  var targetWidth = Math.round(Math.max(SAT_DEFAULT_WIDTH, coverWidth * deviceScale * Math.max(1, scale)));
+  if (targetWidth > SAT_MAX_WIDTH) targetWidth = SAT_MAX_WIDTH;
+  return {
+    width: targetWidth,
+    height: Math.round(targetWidth / SAT_ASPECT_RATIO)
+  };
+}
+
+function applySatelliteImagery(url, width, height) {
+  SAT_URL = url;
+  SAT_NATIVE_SIZE.width = width;
+  SAT_NATIVE_SIZE.height = height;
+  _satelliteState.url = url;
+  _satelliteState.width = width;
+  _satelliteState.height = height;
+  document.documentElement.style.setProperty('--satellite-image', 'url("' + url + '")');
+  refreshAllCamoOverlayTiles();
+}
+
+function requestSatelliteRefresh(force) {
+  var desired = getDesiredSatelliteSize(_mapViewState.scale);
+  if (!force && _satelliteState.width >= desired.width && _satelliteState.height >= desired.height) return;
+  var nextUrl = buildSatelliteUrl(desired.width, desired.height);
+  if (!force && nextUrl === _satelliteState.url) return;
+
+  var requestId = ++_satelliteState.requestId;
+  var img = new Image();
+  img.decoding = 'async';
+  img.onload = function() {
+    if (requestId !== _satelliteState.requestId) return;
+    applySatelliteImagery(nextUrl, desired.width, desired.height);
+  };
+  img.onerror = function() {
+    if (requestId !== _satelliteState.requestId) return;
+    _satelliteState.requestId--;
+  };
+  img.src = nextUrl;
+}
+
+function scheduleSatelliteRefresh(force) {
+  window.clearTimeout(_satelliteRefreshTimer);
+  _satelliteRefreshTimer = window.setTimeout(function() {
+    requestSatelliteRefresh(!!force);
+  }, force ? 0 : SAT_REFRESH_DEBOUNCE);
+}
+
+function createLassoSelection() {
+  return { kind: 'lasso', x: 0, y: 0, w: 0, h: 0, points: [] };
+}
+
+function createSelectionPoint(x, y) {
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+function createRectPolygon(x, y, w, h) {
+  return [
+    createSelectionPoint(x, y),
+    createSelectionPoint(x + w, y),
+    createSelectionPoint(x + w, y + h),
+    createSelectionPoint(x, y + h)
+  ];
+}
+
+function normalizeLassoSelection(selection) {
+  if (!selection) return null;
+  var points = selection.points || [];
+  selection.kind = 'lasso';
+  if (!points.length) {
+    selection.x = 0;
+    selection.y = 0;
+    selection.w = 0;
+    selection.h = 0;
+    return selection;
+  }
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (var i = 0; i < points.length; i++) {
+    var point = points[i];
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  selection.x = Math.round(minX);
+  selection.y = Math.round(minY);
+  selection.w = Math.round(maxX - minX);
+  selection.h = Math.round(maxY - minY);
+  return selection;
+}
+
+function getTestGeMap() {
+  var area = document.getElementById('test-area');
+  return area ? area.querySelector('.ge-map') : null;
+}
+
+function getActualGeMap() {
+  var area = document.getElementById('actual-area');
+  return area ? area.querySelector('.ge-map') : null;
+}
+
+function getLayoutElementMap(area) {
+  if (!area) return null;
+  return area.querySelector('.ge-map');
+}
+
+function getLayoutTargets(layoutKey) {
+  var selector = '[data-layout-key="' + layoutKey + '"]';
+  var targets = [];
+  if (actualArea) {
+    var actualTarget = actualArea.querySelector(selector);
+    if (actualTarget) targets.push(actualTarget);
+  }
+  if (testArea) {
+    var testTarget = testArea.querySelector(selector);
+    if (testTarget) targets.push(testTarget);
+  }
+  return targets;
+}
+
+function applyLayoutPosition(el, position) {
+  if (!el || !position) return;
+  var left = parseFloat(position.left);
+  var top = parseFloat(position.top);
+  if (!isFinite(left) || !isFinite(top)) return;
+  el.style.left = formatPercent(left);
+  el.style.top = formatPercent(top);
+}
+
+function getDefaultLayoutPosition(el) {
+  if (!el) return null;
+  var left = parseFloat(el.getAttribute('data-default-left'));
+  var top = parseFloat(el.getAttribute('data-default-top'));
+  if (!isFinite(left) || !isFinite(top)) return null;
+  return { left: left, top: top };
+}
+
+function applyPersistedLayoutToArea(area) {
+  if (!area) return;
+  var items = area.querySelectorAll('[data-layout-key]');
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var key = item.getAttribute('data-layout-key');
+    var position = _layoutState.positions[key] || getDefaultLayoutPosition(item);
+    if (position) applyLayoutPosition(item, position);
+  }
+}
+
+function syncPersistedLayout(updateState) {
+  applyPersistedLayoutToArea(actualArea);
+  applyPersistedLayoutToArea(testArea);
+  refreshAllCamoOverlayTiles();
+  if (updateState && actualArea) {
+    currentVNodes = containerToVNodes(actualArea);
+    if (stateHistory.idx >= 0) stateHistory.states[stateHistory.idx] = cloneVNode(currentVNodes);
+  }
+}
+
+function updateLayoutCalibrationUI() {
+  var button = document.getElementById('btn-align-layout');
+  var toolbar = document.getElementById('align-toolbar');
+  var enabled = _layoutState.active && currentPane === 'actual';
+  document.body.classList.toggle('layout-calibrating', enabled);
+  if (button) {
+    button.classList.toggle('active', enabled);
+    button.textContent = enabled ? 'Done Align' : 'Align Names';
+  }
+  if (toolbar) toolbar.classList.toggle('show', enabled);
+}
+
+function enterLayoutCalibration() {
+  if (currentPane !== 'actual') switchPane('actual');
+  _layoutState.active = true;
+  updateLayoutCalibrationUI();
+  if (typeof addLog === 'function' && logEl) addLog('info', 'Actual layout align mode enabled');
+}
+
+function exitLayoutCalibration() {
+  _layoutState.active = false;
+  if (_layoutState.dragging && _layoutState.dragging.element) _layoutState.dragging.element.classList.remove('layout-dragging');
+  _layoutState.dragging = null;
+  writeLayoutPositions();
+  syncPersistedLayout(true);
+  updateLayoutCalibrationUI();
+  if (typeof addLog === 'function' && logEl) addLog('info', 'Actual layout align mode closed');
+}
+
+function toggleLayoutCalibration() {
+  if (_layoutState.active && currentPane === 'actual') exitLayoutCalibration();
+  else enterLayoutCalibration();
+}
+
+function resetLayoutCalibration() {
+  _layoutState.positions = {};
+  writeLayoutPositions();
+  syncPersistedLayout(true);
+  updateLayoutCalibrationUI();
+  if (typeof addLog === 'function' && logEl) addLog('info', 'Label positions reset to defaults');
+}
+
+// ═══ LOCK IN POSITIONS: localStorage 정렬값 → HTML 파일 자체에 영구 반영 후 다운로드 ═══
+function lockInPositions() {
+  var btn = document.getElementById('btn-lock-positions');
+  if (btn) { btn.classList.add('baking'); btn.textContent = '⏳ Baking…'; }
+
+  // 현재 저장된 positions 읽기 (없으면 data-default 값 그대로)
+  var positions = readLayoutPositions();
+
+  // 현재 페이지 HTML 전체 가져오기
+  var html = document.documentElement.outerHTML;
+
+  // 각 layout-key에 대해 data-default-top, data-default-left, style top/left 업데이트
+  var keys = Object.keys(positions);
+  var updatedCount = 0;
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var pos = positions[key];
+    if (!pos || !isFinite(pos.left) || !isFinite(pos.top)) continue;
+
+    var leftVal = (Math.round(pos.left * 100) / 100);
+    var topVal  = (Math.round(pos.top  * 100) / 100);
+
+    // data-layout-key="marker-xxx" ... data-default-top="YY" data-default-left="XX"
+    // 정규식으로 해당 블록의 data-default-top / data-default-left / style top / style left 교체
+    var re = new RegExp(
+      '(data-layout-key="' + key.replace(/-/g,'\\-') + '"[^>]*?)' +
+      'data-default-top="[^"]*"([^>]*?)data-default-left="[^"]*"',
+      'g'
+    );
+    var replaced = html.replace(re, function(match, before, between) {
+      return before + 'data-default-top="' + topVal + '"' + between + 'data-default-left="' + leftVal + '"';
+    });
+
+    // 같은 키 요소의 inline style top/left도 교체
+    var re2 = new RegExp(
+      '(data-layout-key="' + key.replace(/-/g,'\\-') + '"[^>]*?style="[^"]*?)top:[^;%]+%([^"]*?)left:[^;%]+%',
+      'g'
+    );
+    replaced = replaced.replace(re2, function(match, before, between) {
+      return before + 'top:' + topVal + '%' + between + 'left:' + leftVal + '%';
+    });
+
+    if (replaced !== html) { html = replaced; updatedCount++; }
+  }
+
+  // 변경된 HTML을 파일로 다운로드
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'index-v2-locked.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+
+  var msg = updatedCount + '개 마커 위치 영구 반영 완료 → index-v2-locked.html 다운로드됨';
+  if (typeof addLog === 'function' && logEl) addLog('info', msg);
+
+  if (btn) {
+    btn.classList.remove('baking');
+    btn.textContent = '✅ Locked!';
+    setTimeout(function() { btn.textContent = '🔒 Lock In'; }, 2500);
+  }
+}
+
+function getCamoUiHost() {
+  return document.getElementById('test-camo-ui');
+}
+
+function updateCamoUiVisibility() {
+  var host = getCamoUiHost();
+  if (!host) return;
+  host.classList.toggle('show', currentPane === 'test' && !_maskFocusState.active);
+}
+
+function updateCamoWorkflowState() {
+  var active = currentPane === 'test' && !!(_camoState.selecting || _camoState.selection || _camoState.masked);
+  document.body.classList.toggle('camo-workflow-active', active);
+}
+
+function getCurrentPaneElement() {
+  return document.getElementById((currentPane || 'actual') + '-pane');
+}
+
+function getMapCanvasSize() {
+  var area = currentPane === 'test' ? document.getElementById('test-area') : document.getElementById('actual-area');
+  var width = area && area.clientWidth ? area.clientWidth : window.innerWidth;
+  var height = area && area.clientHeight ? area.clientHeight : window.innerHeight;
+  return { width: Math.max(1, width), height: Math.max(1, height) };
+}
+
+function clampMapTranslation(scale, translateX, translateY) {
+  var canvas = getMapCanvasSize();
+  return {
+    x: clamp(translateX, canvas.width - canvas.width * scale, 0),
+    y: clamp(translateY, canvas.height - canvas.height * scale, 0)
+  };
+}
+
+function syncMapViewToDom() {
+  var transform =
+    'matrix(' + _mapViewState.scale.toFixed(4) + ',0,0,' + _mapViewState.scale.toFixed(4) + ',' +
+    _mapViewState.translateX.toFixed(2) + ',' + _mapViewState.translateY.toFixed(2) + ')';
+  var areas = [document.getElementById('actual-area'), document.getElementById('test-area')];
+  for (var i = 0; i < areas.length; i++) {
+    if (!areas[i]) continue;
+    areas[i].style.transform = transform;
+  }
+}
+
+function setMapView(scale, translateX, translateY) {
+  var nextScale = clamp(scale, _mapViewState.minScale, _mapViewState.maxScale);
+  var nextTranslation = clampMapTranslation(nextScale, translateX, translateY);
+  _mapViewState.scale = nextScale;
+  _mapViewState.translateX = nextTranslation.x;
+  _mapViewState.translateY = nextTranslation.y;
+  syncMapViewToDom();
+  scheduleSatelliteRefresh(false);
+}
+
+function zoomMapAt(clientX, clientY, factor) {
+  var pane = getCurrentPaneElement();
+  if (!pane) return;
+  var paneRect = pane.getBoundingClientRect();
+  var pointerX = clientX - paneRect.left;
+  var pointerY = clientY - paneRect.top;
+  var newScale = clamp(_mapViewState.scale * factor, _mapViewState.minScale, _mapViewState.maxScale);
+  if (Math.abs(newScale - _mapViewState.scale) < 0.0001) return;
+  var localX = (pointerX - _mapViewState.translateX) / _mapViewState.scale;
+  var localY = (pointerY - _mapViewState.translateY) / _mapViewState.scale;
+  setMapView(newScale, pointerX - localX * newScale, pointerY - localY * newScale);
+}
+
+function zoomMapByStep(direction, clientX, clientY) {
+  var pane = getCurrentPaneElement();
+  if (!pane) return;
+  var paneRect = pane.getBoundingClientRect();
+  var anchorX = typeof clientX === 'number' ? clientX : paneRect.left + paneRect.width / 2;
+  var anchorY = typeof clientY === 'number' ? clientY : paneRect.top + paneRect.height / 2;
+  var factor = direction > 0 ? 1.18 : 1 / 1.18;
+  zoomMapAt(anchorX, anchorY, factor);
+}
+
+function resetMapView() {
+  setMapView(1, 0, 0);
+}
+
+function getMapLocalSize(geMap) {
+  if (!geMap) return { width: 1, height: 1 };
+  return {
+    width: Math.max(1, geMap.clientWidth || Math.round(geMap.getBoundingClientRect().width / Math.max(_mapViewState.scale, 0.0001))),
+    height: Math.max(1, geMap.clientHeight || Math.round(geMap.getBoundingClientRect().height / Math.max(_mapViewState.scale, 0.0001)))
+  };
+}
+
+function getLocalMapPoint(geMap, clientX, clientY) {
+  var rect = geMap.getBoundingClientRect();
+  var size = getMapLocalSize(geMap);
+  return {
+    x: clamp((clientX - rect.left) / _mapViewState.scale, 0, size.width),
+    y: clamp((clientY - rect.top) / _mapViewState.scale, 0, size.height)
+  };
+}
+
+function initMapZoom() {
+  if (_mapZoomBound) return;
+  _mapZoomBound = true;
+
+  document.addEventListener('wheel', function(e) {
+    if (!e.target.closest || !e.target.closest('.map-viewport')) return;
+    e.preventDefault();
+    zoomMapByStep(e.deltaY < 0 ? 1 : -1, e.clientX, e.clientY);
+  }, { passive: false });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest) return;
+    var actionEl = e.target.closest('[data-map-action]');
+    if (!actionEl) return;
+    var action = actionEl.getAttribute('data-map-action');
+    e.preventDefault();
+    e.stopPropagation();
+    if (action === 'zoom-in') zoomMapByStep(1, e.clientX, e.clientY);
+    else if (action === 'zoom-out') zoomMapByStep(-1, e.clientX, e.clientY);
+    else if (action === 'zoom-reset') resetMapView();
+  });
+
+  window.addEventListener('resize', function() {
+    setMapView(_mapViewState.scale, _mapViewState.translateX, _mapViewState.translateY);
+    scheduleSatelliteRefresh(true);
+  });
+}
+
+function initLayoutCalibration() {
+  if (initLayoutCalibration.bound) return;
+  initLayoutCalibration.bound = true;
+
+  document.addEventListener('mousedown', function(e) {
+    if (!_layoutState.active || currentPane !== 'actual') return;
+    if (!actualArea || !e.target.closest) return;
+    var target = e.target.closest('[data-layout-key]');
+    if (!target || !actualArea.contains(target)) return;
+
+    var geMap = getLayoutElementMap(actualArea);
+    if (!geMap || !geMap.contains(target)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    var mapSize = getMapLocalSize(geMap);
+    var rect = target.getBoundingClientRect();
+    var scale = Math.max(_mapViewState.scale, 0.0001);
+    var width = Math.max(1, rect.width / scale);
+    var height = Math.max(1, rect.height / scale);
+    var offsetX = clamp((e.clientX - rect.left) / scale, 0, width);
+    var offsetY = clamp((e.clientY - rect.top) / scale, 0, height);
+    var layoutKey = target.getAttribute('data-layout-key');
+
+    _layoutState.dragging = {
+      key: layoutKey,
+      element: target,
+      geMap: geMap,
+      width: width,
+      height: height,
+      offsetX: offsetX,
+      offsetY: offsetY
+    };
+    target.classList.add('layout-dragging');
+
+    function onMove(ev) {
+      var point = getLocalMapPoint(geMap, ev.clientX, ev.clientY);
+      var leftPx = clamp(point.x - offsetX, 0, Math.max(0, mapSize.width - width));
+      var topPx = clamp(point.y - offsetY, 0, Math.max(0, mapSize.height - height));
+      var left = leftPx / mapSize.width * 100;
+      var top = topPx / mapSize.height * 100;
+      _layoutState.positions[layoutKey] = { left: left, top: top };
+      var targets = getLayoutTargets(layoutKey);
+      for (var i = 0; i < targets.length; i++) applyLayoutPosition(targets[i], _layoutState.positions[layoutKey]);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (target) target.classList.remove('layout-dragging');
+      writeLayoutPositions();
+      syncPersistedLayout(true);
+      if (_layoutState.positions[layoutKey] && typeof addLog === 'function' && logEl) {
+        addLog('info', 'Saved position for ' + layoutKey);
+      }
+      _layoutState.dragging = null;
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function getSatelliteFrame(mapSize) {
+  var scale = Math.max(mapSize.width / SAT_NATIVE_SIZE.width, mapSize.height / SAT_NATIVE_SIZE.height);
+  var width = SAT_NATIVE_SIZE.width * scale;
+  var height = SAT_NATIVE_SIZE.height * scale;
+  return {
+    width: width,
+    height: height,
+    offsetX: (mapSize.width - width) / 2,
+    offsetY: (mapSize.height - height) / 2
+  };
+}
+
+function encodeSelection(selection) {
+  if (!selection) return '';
+  var payload = {
+    kind: selection.kind || 'lasso',
+    x: Math.round(selection.x || 0),
+    y: Math.round(selection.y || 0),
+    w: Math.round(selection.w || 0),
+    h: Math.round(selection.h || 0),
+    points: []
+  };
+  if (selection.points && selection.points.length) {
+    for (var i = 0; i < selection.points.length; i++) {
+      var point = selection.points[i];
+      payload.points.push([Math.round(point.x), Math.round(point.y)]);
+    }
+  }
+  return JSON.stringify(payload);
+}
+
+function decodeSelection(value) {
+  if (!value) return null;
+  if (value.charAt(0) === '{') {
+    try {
+      var parsed = JSON.parse(value);
+      var selection = {
+        kind: parsed.kind || 'lasso',
+        x: Math.round(parsed.x || 0),
+        y: Math.round(parsed.y || 0),
+        w: Math.round(parsed.w || 0),
+        h: Math.round(parsed.h || 0),
+        points: []
+      };
+      if (Array.isArray(parsed.points)) {
+        for (var i = 0; i < parsed.points.length; i++) {
+          var point = parsed.points[i];
+          if (!point || point.length < 2) continue;
+          selection.points.push(createSelectionPoint(point[0], point[1]));
+        }
+      }
+      if (!selection.points.length && parsed.kind === 'brush' && Array.isArray(parsed.stamps) && parsed.stamps.length) {
+        var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (var j = 0; j < parsed.stamps.length; j++) {
+          var stamp = parsed.stamps[j];
+          if (!stamp || stamp.length < 3) continue;
+          minX = Math.min(minX, stamp[0] - stamp[2]);
+          minY = Math.min(minY, stamp[1] - stamp[2]);
+          maxX = Math.max(maxX, stamp[0] + stamp[2]);
+          maxY = Math.max(maxY, stamp[1] + stamp[2]);
+        }
+        if (isFinite(minX)) selection.points = createRectPolygon(minX, minY, maxX - minX, maxY - minY);
+      }
+      return normalizeLassoSelection(selection);
+    } catch (err) {
+      return null;
+    }
+  }
+  var parts = value.split(',');
+  if (parts.length !== 4) return null;
+  var nums = [];
+  for (var j = 0; j < parts.length; j++) {
+    var num = parseFloat(parts[j]);
+    if (!isFinite(num)) return null;
+    nums.push(num);
+  }
+  return normalizeLassoSelection({ kind: 'lasso', x: nums[0], y: nums[1], w: nums[2], h: nums[3], points: createRectPolygon(nums[0], nums[1], nums[2], nums[3]) });
+}
+
+function ensureSelectionLayer(geMap, confirmed) {
+  var layer = geMap.querySelector('.camo-selection-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'camo-selection-layer';
+    geMap.appendChild(layer);
+  }
+  layer.classList.toggle('confirmed', !!confirmed);
+  return layer;
+}
+
+function buildPointsAttr(points) {
+  var result = [];
+  for (var i = 0; i < points.length; i++) result.push(Math.round(points[i].x) + ',' + Math.round(points[i].y));
+  return result.join(' ');
+}
+
+function clearSelectionPreview(geMap) {
+  geMap = geMap || getTestGeMap();
+  if (!geMap) return;
+  var layer = geMap.querySelector('.camo-selection-layer');
+  if (layer) layer.remove();
+}
+
+function renderLassoSelection(geMap, selection, confirmed, openShape) {
+  if (!geMap || !selection || !selection.points || !selection.points.length) return null;
+  var layer = ensureSelectionLayer(geMap, confirmed);
+  var pointsAttr = buildPointsAttr(selection.points);
+  var width = Math.max(1, geMap.clientWidth || geMap.getBoundingClientRect().width);
+  var height = Math.max(1, geMap.clientHeight || geMap.getBoundingClientRect().height);
+  var start = selection.points[0];
+  var end = selection.points[selection.points.length - 1];
+  var fillHtml = !openShape && selection.points.length > 2 ? '<polygon class="camo-lasso-fill" points="' + pointsAttr + '"></polygon>' : '';
+  var outlineHtml = !openShape && selection.points.length > 2 ?
+    '<polygon class="camo-lasso-line" points="' + pointsAttr + '"></polygon>' :
+    '<polyline class="camo-lasso-line" points="' + pointsAttr + '"></polyline>';
+  layer.innerHTML =
+    '<svg class="camo-lasso-svg" viewBox="0 0 ' + Math.round(width) + ' ' + Math.round(height) + '" preserveAspectRatio="none">' +
+    fillHtml +
+    outlineHtml +
+    '<circle class="camo-lasso-node" cx="' + Math.round(start.x) + '" cy="' + Math.round(start.y) + '" r="4"></circle>' +
+    '<circle class="camo-lasso-node" cx="' + Math.round(end.x) + '" cy="' + Math.round(end.y) + '" r="4"></circle>' +
+    '</svg>';
+  return layer;
+}
+
+function maybeAddLassoPoint(selection, x, y) {
+  var last = selection.points.length ? selection.points[selection.points.length - 1] : null;
+  if (last) {
+    var minDistance = CAMO_TRACE_POINT_DISTANCE;
+    if (Math.hypot(x - last.x, y - last.y) < minDistance) return last;
+  }
+  var point = createSelectionPoint(x, y);
+  selection.points.push(point);
+  normalizeLassoSelection(selection);
+  return point;
+}
+
+function traceLassoSegment(selection, fromX, fromY, toX, toY) {
+  var distance = Math.hypot(toX - fromX, toY - fromY);
+  var step = CAMO_TRACE_POINT_DISTANCE;
+  var totalSteps = Math.max(1, Math.ceil(distance / step));
+  for (var i = 0; i <= totalSteps; i++) {
+    var t = totalSteps === 0 ? 1 : i / totalSteps;
+    maybeAddLassoPoint(selection, fromX + (toX - fromX) * t, fromY + (toY - fromY) * t);
+  }
+  return normalizeLassoSelection(selection);
+}
+
+function clearCamoOverlays(geMap) {
+  geMap = geMap || getTestGeMap();
+  if (!geMap) return;
+  var layer = geMap.querySelector('.camo-overlay-layer');
+  if (layer) layer.remove();
+  var overlays = geMap.querySelectorAll('.camo-overlay');
+  for (var i = 0; i < overlays.length; i++) overlays[i].remove();
+  _camoState.overlays = [];
+}
+
+function buildClipPathPolygon(points) {
+  var result = [];
+  for (var i = 0; i < points.length; i++) {
+    result.push(Math.round(points[i].x) + 'px ' + Math.round(points[i].y) + 'px');
+  }
+  return 'polygon(' + result.join(',') + ')';
+}
+
+function ensureCamoOverlayLayer(geMap, selection) {
+  if (!geMap || !selection || !selection.points || selection.points.length < 3) return null;
+  var layer = geMap.querySelector('.camo-overlay-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'camo-overlay-layer';
+    geMap.appendChild(layer);
+  }
+  var clipValue = buildClipPathPolygon(selection.points);
+  layer.style.clipPath = clipValue;
+  layer.style.webkitClipPath = clipValue;
+  return layer;
+}
+
+function persistCamoMetadata(geMap) {
+  if (!geMap) return;
+  if (_camoState.selection) geMap.setAttribute(CAMO_SELECTION_ATTR, encodeSelection(_camoState.selection));
+  else geMap.removeAttribute(CAMO_SELECTION_ATTR);
+  geMap.setAttribute(CAMO_MASKED_ATTR, _camoState.masked ? 'true' : 'false');
+  if (_camoState.overlays.length) geMap.setAttribute('data-camo-patches', String(_camoState.overlays.length));
+  else geMap.removeAttribute('data-camo-patches');
+}
+
+function getSelectionSummary() {
+  if (!_camoState.selection) return '';
+  return Math.round(_camoState.selection.w) + ' x ' + Math.round(_camoState.selection.h) + ' px';
+}
+
+function updateMaskFocusHud() {
+  var statusEl = document.getElementById('mask-hud-status');
+  var selectBtn = document.getElementById('mask-hud-select');
+  var applyBtn = document.getElementById('mask-hud-apply');
+  var clearBtn = document.getElementById('mask-hud-clear');
+  var patchBtn = document.getElementById('mask-hud-patch');
+  var focusBtn = document.getElementById('btn-mask-focus');
+  if (!statusEl || !selectBtn || !applyBtn || !clearBtn || !patchBtn || !focusBtn) return;
+
+  var enabled = _maskFocusState.active && currentPane === 'test';
+  var summary = getSelectionSummary();
+
+  if (enabled) {
+    if (_camoState.selecting) statusEl.textContent = 'Trace the outline, then release to close the region';
+    else if (_camoState.masked && summary) statusEl.textContent = 'Preview ready · ' + summary;
+    else if (_camoState.selection && summary) statusEl.textContent = 'Selection ready · ' + summary;
+    else statusEl.textContent = 'Satellite only · choose a region to conceal';
+  } else {
+    statusEl.textContent = 'Satellite view only';
+  }
+
+  selectBtn.textContent = _camoState.selecting ? 'Cancel Trace' : (_camoState.selection || _camoState.masked ? 'Retrace' : 'Trace Area');
+  selectBtn.disabled = !_maskFocusState.active || currentPane !== 'test';
+  applyBtn.disabled = !_maskFocusState.active || currentPane !== 'test' || !_camoState.selection || _camoState.masked;
+  clearBtn.disabled = !_maskFocusState.active || currentPane !== 'test' || (!_camoState.selection && !_camoState.masked);
+  patchBtn.disabled = !_maskFocusState.active || currentPane !== 'test';
+
+  focusBtn.classList.toggle('active', enabled);
+  focusBtn.textContent = enabled ? 'Exit Focus' : 'Mask Focus';
+}
+
+function applyMaskFocusState() {
+  var enabled = _maskFocusState.active && currentPane === 'test';
+  document.body.classList.toggle('mask-focus-mode', enabled);
+  updateCamoUiVisibility();
+  updateCamoWorkflowState();
+  updateMaskFocusHud();
+}
+
+function enterMaskFocus() {
+  if (currentPane !== 'test') switchPane('test');
+  if (selectedEl) {
+    selectedEl.classList.remove('el-selected');
+    selectedEl = null;
+  }
+  _maskFocusState.active = true;
+  _camoState.consumeClick = false;
+  applyMaskFocusState();
+  if (typeof addLog === 'function' && logEl) addLog('info', 'Mask Focus enabled');
+}
+
+function exitMaskFocus() {
+  _maskFocusState.active = false;
+  _camoState.selecting = false;
+  _camoState.consumeClick = false;
+  document.body.classList.remove('camo-selecting');
+  applyMaskFocusState();
+  if (typeof addLog === 'function' && logEl) addLog('info', 'Mask Focus closed');
+}
+
+function toggleMaskFocus() {
+  if (_maskFocusState.active) exitMaskFocus();
+  else enterMaskFocus();
+}
+
+function buildCamoPanel() {
+  var s = _camoState;
+  var hasSelection = !!s.selection;
+  var isMasked = s.masked;
+  var isSelecting = s.selecting;
+  var patchCount = s.overlays.length ? s.overlays.length + ' patches' : 'pending';
+
+  var statusText = isSelecting ? 'SELECT REGION' : (isMasked ? 'CAMO APPLIED' : (hasSelection ? 'READY TO MASK' : 'STANDBY'));
+  var statusCls = isMasked ? 'camo-status-val' : '';
+  var selectBtnCls = isSelecting ? 'camo-btn camo-btn-active' : 'camo-btn';
+  var selectLabel = isSelecting ? '&#10060; Cancel Trace' : '&#9998; Trace Mask Area';
+  var applyDisabled = (!hasSelection || isMasked) ? ' disabled' : '';
+  var clearDisabled = (!hasSelection && !isMasked) ? ' disabled' : '';
+
+  var infoHtml = '';
+  if (hasSelection && !isMasked) {
+    infoHtml = '<div class="camo-info">' +
+      '<div class="scan-line"><span>Area:</span><span class="scan-val">' + s.selection.w + ' x ' + s.selection.h + ' px</span></div>' +
+      '<div class="scan-line"><span>Method:</span><span class="scan-val">PERIMETER SAMPLE</span></div>' +
+      '<div class="scan-line"><span>Source:</span><span class="scan-val">ADJACENT FOREST</span></div>' +
+      '</div>';
+  }
+  if (isMasked) {
+    infoHtml = '<div class="camo-info active">' +
+      '<div class="scan-line"><span>Status:</span><span class="scan-val">CONCEALED</span></div>' +
+      '<div class="scan-line"><span>Area:</span><span class="scan-val">' + s.selection.w + ' x ' + s.selection.h + ' px</span></div>' +
+      '<div class="scan-line"><span>Patches:</span><span class="scan-val">' + patchCount + '</span></div>' +
+      '<div class="scan-line"><span>Terrain:</span><span class="scan-val">CATOCTIN FOREST</span></div>' +
+      '</div>';
+  }
+
+  return '<div class="camo-control">' +
+    '<h4>&#128737; Terrain Camo</h4>' +
+    '<div class="camo-status"><div class="camo-status-line"><span>Status</span><span class="' + statusCls + '">' + statusText + '</span></div></div>' +
+    '<div class="camo-btn-group">' +
+      '<button type="button" class="' + selectBtnCls + '" onclick="event.stopPropagation();startCamoSelect()">' + selectLabel + '</button>' +
+      '<button type="button" class="camo-btn camo-btn-apply' + applyDisabled + '" onclick="event.stopPropagation();applyCamo()">&#127796; Apply Terrain Clone</button>' +
+      '<button type="button" class="camo-btn camo-btn-clear' + clearDisabled + '" onclick="event.stopPropagation();clearCamo()">&#128465; Clear Mask</button>' +
+    '</div>' +
+    infoHtml +
+    '<div class="camo-hint">Trace a freehand outline on the test map, then blend only the enclosed region.</div>' +
+  '</div>';
+}
+
+function refreshCamoPanel() {
+  var geMap = getTestGeMap();
+  var host = getCamoUiHost();
+  if (!geMap || !host) {
+    if (host) host.innerHTML = '';
+    updateCamoUiVisibility();
+    updateCamoWorkflowState();
+    return;
+  }
+  var oldPanel = host.querySelector('.camo-control');
+  var tmp = document.createElement('div');
+  tmp.innerHTML = buildCamoPanel();
+  if (oldPanel) host.replaceChild(tmp.firstChild, oldPanel);
+  else host.appendChild(tmp.firstChild);
+  persistCamoMetadata(geMap);
+  updateCamoUiVisibility();
+  updateCamoWorkflowState();
+  updateMaskFocusHud();
+}
+
+function syncCamoStateFromDom() {
+  var geMap = getTestGeMap();
+  if (!geMap) {
+    _camoState.selection = null;
+    _camoState.overlays = [];
+    _camoState.masked = false;
+    _camoState.selecting = false;
+    _camoState.consumeClick = false;
+    return;
+  }
+  _camoState.selection = decodeSelection(geMap.getAttribute(CAMO_SELECTION_ATTR));
+  _camoState.overlays = Array.prototype.slice.call(geMap.querySelectorAll('.camo-overlay'));
+  _camoState.masked = geMap.getAttribute(CAMO_MASKED_ATTR) === 'true' || _camoState.overlays.length > 0;
+  _camoState.selecting = false;
+  _camoState.consumeClick = false;
+  document.body.classList.remove('camo-selecting');
+  clearSelectionPreview(geMap);
+  if (_camoState.selection) renderLassoSelection(geMap, _camoState.selection, _camoState.masked, false);
+  refreshCamoPanel();
+}
+
+function startCamoSelect() {
+  var geMap = getTestGeMap();
+  if (!geMap) return;
+  if (selectedEl) {
+    selectedEl.classList.remove('el-selected');
+    selectedEl = null;
+  }
+  if (_camoState.selecting) {
+    _camoState.selecting = false;
+    _camoState.selection = null;
+    _camoState.masked = false;
+    clearCamoOverlays(geMap);
+    clearSelectionPreview(geMap);
+    persistCamoMetadata(geMap);
+    document.body.classList.remove('camo-selecting');
+    refreshCamoPanel();
+    if (typeof addLog === 'function' && logEl) addLog('info', 'Terrain camo selection cancelled');
+    return;
+  }
+  _camoState.selecting = true;
+  _camoState.selection = null;
+  _camoState.masked = false;
+  clearCamoOverlays(geMap);
+  clearSelectionPreview(geMap);
+  persistCamoMetadata(geMap);
+  document.body.classList.add('camo-selecting');
+  refreshCamoPanel();
+  if (typeof addLog === 'function' && logEl) addLog('info', '&#9998; Trace the region outline to define the camo zone');
+}
+
+function buildSamplingOffsets(selection) {
+  var padX = Math.max(40, selection.w * 0.55);
+  var padY = Math.max(40, selection.h * 0.55);
+  return [
+    { dx: -padX, dy: 0 },
+    { dx: padX, dy: 0 },
+    { dx: 0, dy: -padY },
+    { dx: 0, dy: padY },
+    { dx: -padX * 0.9, dy: -padY * 0.75 },
+    { dx: padX * 0.9, dy: -padY * 0.75 },
+    { dx: -padX * 0.9, dy: padY * 0.75 },
+    { dx: padX * 0.9, dy: padY * 0.75 }
+  ];
+}
+
+function pointInPolygon(x, y, points) {
+  var inside = false;
+  for (var i = 0, j = points.length - 1; i < points.length; j = i++) {
+    var xi = points[i].x, yi = points[i].y;
+    var xj = points[j].x, yj = points[j].y;
+    var intersect = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / ((yj - yi) || 0.00001) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function rectTouchesSelection(x, y, width, height, selection) {
+  if (!selection) return false;
+  if (selection.kind === 'lasso' && selection.points && selection.points.length >= 3) {
+    var corners = [
+      { x: x, y: y },
+      { x: x + width, y: y },
+      { x: x + width, y: y + height },
+      { x: x, y: y + height },
+      { x: x + width / 2, y: y + height / 2 }
+    ];
+    for (var i = 0; i < corners.length; i++) {
+      if (pointInPolygon(corners[i].x, corners[i].y, selection.points)) return true;
+    }
+    for (var j = 0; j < selection.points.length; j++) {
+      var point = selection.points[j];
+      if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) return true;
+    }
+    return false;
+  }
+  return x < selection.x + selection.w &&
+    x + width > selection.x &&
+    y < selection.y + selection.h &&
+    y + height > selection.y;
+}
+
+function pickSampleSource(tileX, tileY, tileW, tileH, selection, mapSize, offsets) {
+  var maxX = Math.max(0, mapSize.width - tileW);
+  var maxY = Math.max(0, mapSize.height - tileH);
+  for (var attempt = 0; attempt < 14; attempt++) {
+    var offset = offsets[Math.floor(Math.random() * offsets.length)];
+    var srcX = clamp(tileX + offset.dx + randomBetween(-28, 28), 0, maxX);
+    var srcY = clamp(tileY + offset.dy + randomBetween(-28, 28), 0, maxY);
+    if (!rectTouchesSelection(srcX, srcY, tileW, tileH, selection)) {
+      return { x: Math.round(srcX), y: Math.round(srcY) };
+    }
+  }
+  var fallbackX = selection.x + selection.w + 32;
+  if (fallbackX + tileW > mapSize.width) fallbackX = selection.x - tileW - 32;
+  var fallbackY = selection.y - tileH - 32;
+  if (fallbackY < 0) fallbackY = selection.y + selection.h + 32;
+  return {
+    x: Math.round(clamp(fallbackX, 0, maxX)),
+    y: Math.round(clamp(fallbackY, 0, maxY))
+  };
+}
+
+function createCamoOverlay(tileX, tileY, tileW, tileH, source, frame, kind) {
+  var overlay = document.createElement('div');
+  overlay.className = 'camo-overlay' + (kind === 'soft' ? ' camo-overlay-soft' : '');
+  overlay.setAttribute('data-source-x', Math.round(source.x));
+  overlay.setAttribute('data-source-y', Math.round(source.y));
+  overlay.style.cssText =
+    'left:' + Math.round(tileX) + 'px;' +
+    'top:' + Math.round(tileY) + 'px;' +
+    'width:' + Math.round(tileW) + 'px;' +
+    'height:' + Math.round(tileH) + 'px;' +
+    'opacity:' + randomBetween(0.92, 0.99).toFixed(2) + ';';
+
+  var inner = document.createElement('div');
+  inner.className = 'camo-overlay-tile';
+  inner.style.cssText =
+    'background-image:url(' + SAT_URL + ');' +
+    'background-size:' + frame.width.toFixed(2) + 'px ' + frame.height.toFixed(2) + 'px;' +
+    'background-position:' + (frame.offsetX - source.x).toFixed(2) + 'px ' + (frame.offsetY - source.y).toFixed(2) + 'px;' +
+    'transform:scale(' + randomBetween(1.06, 1.14).toFixed(2) + ') rotate(' + randomBetween(-4, 4).toFixed(2) + 'deg);' +
+    'filter:contrast(' + randomBetween(1.02, 1.12).toFixed(2) + ') saturate(' + randomBetween(1.02, 1.18).toFixed(2) + ') brightness(' + randomBetween(0.88, 0.98).toFixed(2) + ');';
+  overlay.appendChild(inner);
+  return overlay;
+}
+
+function refreshCamoOverlayTiles(geMap) {
+  if (!geMap) return;
+  var overlays = geMap.querySelectorAll('.camo-overlay');
+  if (!overlays.length) return;
+  var frame = getSatelliteFrame(getMapLocalSize(geMap));
+  for (var i = 0; i < overlays.length; i++) {
+    var overlay = overlays[i];
+    var inner = overlay.querySelector('.camo-overlay-tile');
+    if (!inner) continue;
+    var sourceX = parseFloat(overlay.getAttribute('data-source-x'));
+    var sourceY = parseFloat(overlay.getAttribute('data-source-y'));
+    if (!isFinite(sourceX) || !isFinite(sourceY)) continue;
+    inner.style.backgroundImage = 'url(' + SAT_URL + ')';
+    inner.style.backgroundSize = frame.width.toFixed(2) + 'px ' + frame.height.toFixed(2) + 'px';
+    inner.style.backgroundPosition = (frame.offsetX - sourceX).toFixed(2) + 'px ' + (frame.offsetY - sourceY).toFixed(2) + 'px';
+  }
+}
+
+function refreshAllCamoOverlayTiles() {
+  refreshCamoOverlayTiles(getActualGeMap());
+  refreshCamoOverlayTiles(getTestGeMap());
+}
+
+function applyCamo() {
+  var geMap = getTestGeMap();
+  if (!geMap || !_camoState.selection || _camoState.masked) return;
+  var mapSize = getMapLocalSize(geMap);
+  if (!mapSize.width || !mapSize.height) return;
+  var selection = _camoState.selection;
+  var frame = getSatelliteFrame(mapSize);
+  var offsets = buildSamplingOffsets(selection);
+
+  clearCamoOverlays(geMap);
+  _camoState.overlays = [];
+  var overlayLayer = ensureCamoOverlayLayer(geMap, selection);
+  if (!overlayLayer) return;
+
+  var radius = CAMO_PATCH_RADIUS;
+  var stepX = radius * 1.45;
+  var stepY = radius * 1.28;
+  var minX = selection.x + radius;
+  var maxX = selection.x + selection.w - radius;
+  var minY = selection.y + radius;
+  var maxY = selection.y + selection.h - radius;
+
+  for (var y = minY, row = 0; y <= maxY; y += stepY, row++) {
+    var rowOffset = row % 2 ? stepX * 0.5 : 0;
+    for (var x = minX + rowOffset; x <= maxX; x += stepX) {
+      var cx = clamp(x + randomBetween(-4, 4), minX, maxX);
+      var cy = clamp(y + randomBetween(-3, 3), minY, maxY);
+      if (!pointInPolygon(cx, cy, selection.points)) continue;
+      var patchRadius = Math.round(randomBetween(radius * 0.88, radius * 1.16));
+      var tileX = cx - patchRadius;
+      var tileY = cy - patchRadius;
+      var tileW = patchRadius * 2;
+      var tileH = patchRadius * 2;
+      var source = pickSampleSource(tileX, tileY, tileW, tileH, selection, mapSize, offsets);
+      var overlay = createCamoOverlay(tileX, tileY, tileW, tileH, source, frame, 'soft');
+      overlayLayer.appendChild(overlay);
+      _camoState.overlays.push(overlay);
+    }
+  }
+
+  for (var i = 0; i < selection.points.length; i += 3) {
+    var edgePoint = selection.points[i];
+    var edgeRadius = Math.round(radius * 0.82);
+    var edgeTileX = edgePoint.x - edgeRadius;
+    var edgeTileY = edgePoint.y - edgeRadius;
+    var edgeTileW = edgeRadius * 2;
+    var edgeTileH = edgeRadius * 2;
+    var edgeSource = pickSampleSource(edgeTileX, edgeTileY, edgeTileW, edgeTileH, selection, mapSize, offsets);
+    var edgeOverlay = createCamoOverlay(edgeTileX, edgeTileY, edgeTileW, edgeTileH, edgeSource, frame, 'soft');
+    overlayLayer.appendChild(edgeOverlay);
+    _camoState.overlays.push(edgeOverlay);
+  }
+
+  if (!_camoState.overlays.length && selection.points.length >= 3) {
+    for (var k = 0; k < selection.points.length; k++) {
+      var fallbackPoint = selection.points[k];
+      var fallbackRadius = Math.round(radius * 0.9);
+      var fallbackX = fallbackPoint.x - fallbackRadius;
+      var fallbackY = fallbackPoint.y - fallbackRadius;
+      var fallbackSize = fallbackRadius * 2;
+      var fallbackSource = pickSampleSource(fallbackX, fallbackY, fallbackSize, fallbackSize, selection, mapSize, offsets);
+      var fallbackOverlay = createCamoOverlay(fallbackX, fallbackY, fallbackSize, fallbackSize, fallbackSource, frame, 'soft');
+      overlayLayer.appendChild(fallbackOverlay);
+      _camoState.overlays.push(fallbackOverlay);
+    }
+  }
+
+  renderLassoSelection(geMap, selection, true, false);
+  _camoState.masked = true;
+  _camoState.selecting = false;
+  updateCamoWorkflowState(); // masked=true 상태로 camo-workflow-active 유지 후 camo-selecting 해제
+  persistCamoMetadata(geMap);
+  document.body.classList.remove('camo-selecting');
+  refreshCamoPanel();
+  if (typeof addLog === 'function' && logEl) addLog('info', '&#127796; Terrain camo preview ready (' + _camoState.overlays.length + ' patches)');
+}
+
+function clearCamo() {
+  var geMap = getTestGeMap();
+  if (!geMap) return;
+  var hadMask = !!_camoState.selection || _camoState.overlays.length > 0 || _camoState.masked;
+  _camoState.masked = false;
+  _camoState.selection = null;
+  _camoState.selecting = false;
+  clearCamoOverlays(geMap);
+  clearSelectionPreview(geMap);
+  persistCamoMetadata(geMap);
+  document.body.classList.remove('camo-selecting');
+  refreshCamoPanel();
+  if (hadMask && typeof addLog === 'function' && logEl) addLog('info', '&#128465; Terrain camo cleared');
+}
+
+function initCamoSelection() {
+  if (_camoSelectionBound) return;
+  _camoSelectionBound = true;
+  document.addEventListener('mousedown', function(e) {
+    if (!_camoState.selecting || currentPane !== 'test') return;
+    var geMap = getTestGeMap();
+    if (!geMap) return;
+    if (e.target.closest && e.target.closest('.camo-control')) return;
+    var mapRect = geMap.getBoundingClientRect();
+    var mapSize = getMapLocalSize(geMap);
+    if (!mapRect.width || !mapRect.height || !mapSize.width || !mapSize.height) return;
+
+    if (e.clientX < mapRect.left || e.clientX > mapRect.right ||
+        e.clientY < mapRect.top || e.clientY > mapRect.bottom) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    var startPoint = getLocalMapPoint(geMap, e.clientX, e.clientY);
+    _camoState.startX = startPoint.x;
+    _camoState.startY = startPoint.y;
+    _camoState.masked = false;
+    _camoState.selection = createLassoSelection();
+    _camoState.consumeClick = true;
+    clearCamoOverlays(geMap);
+    clearSelectionPreview(geMap);
+    persistCamoMetadata(geMap);
+    var lastPoint = { x: _camoState.startX, y: _camoState.startY };
+    traceLassoSegment(_camoState.selection, lastPoint.x, lastPoint.y, lastPoint.x, lastPoint.y);
+    renderLassoSelection(geMap, _camoState.selection, false, true);
+
+    function onMove(ev) {
+      var nextPoint = getLocalMapPoint(geMap, ev.clientX, ev.clientY);
+      traceLassoSegment(_camoState.selection, lastPoint.x, lastPoint.y, nextPoint.x, nextPoint.y);
+      lastPoint = nextPoint;
+      renderLassoSelection(geMap, _camoState.selection, false, true);
+    }
+
+    function onUp(ev) {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      var finalPoint = getLocalMapPoint(geMap, ev.clientX, ev.clientY);
+      traceLassoSegment(_camoState.selection, lastPoint.x, lastPoint.y, finalPoint.x, finalPoint.y);
+      _camoState.selecting = false;
+      updateCamoWorkflowState(); // camo-workflow-active 먼저 세팅 후 camo-selecting 해제 (라벨 flash 방지)
+      document.body.classList.remove('camo-selecting');
+
+      if (_camoState.selection && _camoState.selection.points.length >= 3) {
+        normalizeLassoSelection(_camoState.selection);
+        renderLassoSelection(geMap, _camoState.selection, false, false);
+        persistCamoMetadata(geMap);
+        refreshCamoPanel();
+        if (typeof addLog === 'function' && logEl) addLog('info', '&#9998; Lasso region selected (' + _camoState.selection.points.length + ' points)');
+      } else {
+        _camoState.selection = null;
+        clearSelectionPreview(geMap);
+        persistCamoMetadata(geMap);
+        refreshCamoPanel();
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+var SAMPLE_HTML = [
+'<div class="ge-map" data-camo-masked="false">',
+'<div class="ge-logo">Google Earth</div>',
+'<div class="ge-search">',
+'<span class="ge-search-icon">&#128269;</span>',
+'<span class="ge-search-text">Camp David, Thurmont, MD</span>',
+'<span class="ge-search-voice">&#127908;</span>',
+'</div>',
+
+// Marker 1 — Aspen Lodge (메인 건물 단지 상단)
+'<div class="ge-marker" data-layout-key="marker-aspen" data-default-top="62" data-default-left="48.5" style="top:62%;left:48.5%">',
+'<div class="ge-pin ge-pin-red"><span class="ge-pin-inner">1</span></div>',
+'<span class="ge-marker-label">Aspen Lodge</span>',
+'</div>',
+
+// Marker 2 — Laurel Lodge (상단 건물들, 숲 속)
+'<div class="ge-marker" data-layout-key="marker-laurel" data-default-top="48.6" data-default-left="54.6" style="top:48.6%;left:54.6%">',
+'<div class="ge-pin ge-pin-blue"><span class="ge-pin-inner">2</span></div>',
+'<span class="ge-marker-label">Laurel Lodge</span>',
+'</div>',
+
+// Marker 3 — Camp David 중심 (구글어스 스크린샷 마커 위치 그대로)
+'<div class="ge-marker" data-layout-key="marker-camp-david" data-default-top="53.6" data-default-left="51.9" style="top:53.6%;left:51.9%">',
+'<div class="ge-pin ge-pin-green"><span class="ge-pin-inner">&#127963;</span></div>',
+'<span class="ge-marker-label">Camp David</span>',
+'</div>',
+
+// Marker 4 — Holly Cabin (건물 단지 아래쪽)
+'<div class="ge-marker" data-layout-key="marker-holly" data-default-top="70" data-default-left="43.1" style="top:70%;left:43.1%">',
+'<div class="ge-pin ge-pin-yellow"><span class="ge-pin-inner">4</span></div>',
+'<span class="ge-marker-label">Holly Cabin</span>',
+'</div>',
+
+// Marker 5 — Skeet Shooting Range (좌측 하단, 이미지 스크린샷 위치)
+'<div class="ge-marker" data-layout-key="marker-skeet" data-default-top="87" data-default-left="19.2" style="top:87%;left:19.2%">',
+'<div class="ge-pin ge-pin-green"><span class="ge-pin-inner">5</span></div>',
+'<span class="ge-marker-label">Skeet Shooting Range</span>',
+'</div>',
+
+// Marker 6 — Helipad (건물 앞 별 모양 헬기장)
+'<div class="ge-marker label-top" data-layout-key="marker-helipad" data-default-top="72.9" data-default-left="49.2" style="top:72.9%;left:49.2%">',
+'<div class="ge-pin ge-pin-red"><span class="ge-pin-inner">H</span></div>',
+'<span class="ge-marker-label">Helipad</span>',
+'</div>',
+
+// Marker 7 — Putting Green (우측 녹지 공터)
+'<div class="ge-marker" data-layout-key="marker-putting" data-default-top="44.3" data-default-left="73.1" style="top:44.3%;left:73.1%">',
+'<div class="ge-pin ge-pin-yellow"><span class="ge-pin-inner">7</span></div>',
+'<span class="ge-marker-label">Putting Green</span>',
+'</div>',
+
+// Info panel — Aspen Lodge (마커 옆에 표시)
+'<div class="ge-info-panel" data-layout-key="panel-aspen" data-default-top="54" data-default-left="53.8" style="position:absolute;top:54%;left:53.8%;z-index:4">',
+'<h3>Aspen Lodge</h3>',
+'<div class="ge-info-type">Presidential Retreat &middot; Catoctin Mountain</div>',
+'<p>미국 대통령의 공식 별장. Catoctin Mountain Park 내 해발 549m에 위치한 최고 보안 시설.</p>',
+'<div class="ge-info-tags">',
+'<span class="ge-info-tag tag-red">TOP SECRET</span>',
+'<span class="ge-info-tag tag-green">Presidential</span>',
+'<span class="ge-info-tag tag-yellow">Helipad</span>',
+'<span class="ge-info-tag">USMC Security</span>',
+'</div>',
+'<div class="ge-streetview">&#128247; Street View (Restricted)</div>',
+'</div>',
+
+buildCamoPanel(),
+
+'<div class="ge-sidebar">',
+'<div class="ge-sidebar-card">',
+'<h4>&#127760; Layers</h4>',
+'<div class="ge-layers">',
+'<div class="ge-layer-item"><div class="ge-layer-toggle on"></div><span>Satellite</span></div>',
+'<div class="ge-layer-item"><div class="ge-layer-toggle on"></div><span>Roads &amp; Trails</span></div>',
+'<div class="ge-layer-item"><div class="ge-layer-toggle off"></div><span>3D Buildings</span></div>',
+'<div class="ge-layer-item"><div class="ge-layer-toggle on"></div><span>Terrain</span></div>',
+'</div>',
+'</div>',
+
+'<div class="ge-sidebar-card">',
+'<h4>&#9729;&#65039; Weather</h4>',
+'<div class="ge-weather">',
+'<span class="ge-weather-icon">&#127787;&#65039;</span>',
+'<span class="ge-weather-temp">8&deg;C</span>',
+'<span class="ge-weather-desc">Thurmont &middot; Overcast</span>',
+'</div>',
+'</div>',
+
+'<div class="ge-sidebar-card">',
+'<h4>&#127963; Facilities</h4>',
+'<div class="ge-timeline">',
+'<div class="ge-timeline-dot current"></div>',
+'<span class="ge-timeline-label">Lodge</span>',
+'<div class="ge-timeline-dot current"></div>',
+'<span class="ge-timeline-label">Helipad</span>',
+'<div class="ge-timeline-dot current"></div>',
+'<span class="ge-timeline-label">Range</span>',
+'</div>',
+'</div>',
+'</div>',
+
+'<div class="ge-nav">',
+'<div class="ge-nav-btn" data-map-action="zoom-in">+</div>',
+'<div class="ge-nav-btn" data-map-action="zoom-out">&minus;</div>',
+'<div class="ge-nav-btn" data-map-action="zoom-reset">&#9678;</div>',
+'</div>',
+'<div class="ge-scale">',
+'<div class="ge-scale-bar"></div>',
+'<span class="ge-scale-text">100m</span>',
+'</div>',
+'<div class="ge-coords">',
+'<span><span class="ge-coord-label">LAT</span> 39.6480&deg;N</span>',
+'<span><span class="ge-coord-label">LNG</span> 77.4650&deg;W</span>',
+'<span><span class="ge-coord-label">ELEV</span> 549m</span>',
+'</div>',
+'</div>'
+].join('');
+
+// ═══ VIRTUAL DOM CORE ═══
+function createVNode(type, props, children) {
+  return { type: type, props: props || {}, children: children || [] };
+}
+function createTextVNode(value) {
+  return { type: 'TEXT_NODE', props: {}, children: [], value: value };
+}
+function domToVNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    if (node.textContent.trim() === '') return null;
+    return createTextVNode(node.textContent);
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+  var props = {};
+  for (var i = 0; i < node.attributes.length; i++) {
+    props[node.attributes[i].name] = node.attributes[i].value;
+  }
+  var children = [];
+  for (var j = 0; j < node.childNodes.length; j++) {
+    var v = domToVNode(node.childNodes[j]);
+    if (v) children.push(v);
+  }
+  return createVNode(node.tagName.toLowerCase(), props, children);
+}
+function containerToVNodes(el) {
+  var result = [];
+  for (var i = 0; i < el.childNodes.length; i++) {
+    var v = domToVNode(el.childNodes[i]);
+    if (v) result.push(v);
+  }
+  return result;
+}
+function renderVNode(vnode) {
+  if (vnode.type === 'TEXT_NODE') return document.createTextNode(vnode.value);
+  var el = document.createElement(vnode.type);
+  var keys = Object.keys(vnode.props);
+  for (var i = 0; i < keys.length; i++) el.setAttribute(keys[i], vnode.props[keys[i]]);
+  for (var j = 0; j < vnode.children.length; j++) el.appendChild(renderVNode(vnode.children[j]));
+  return el;
+}
+function renderToContainer(vnodes, container) {
+  container.innerHTML = '';
+  for (var i = 0; i < vnodes.length; i++) container.appendChild(renderVNode(vnodes[i]));
+}
+function cloneVNode(vnode) {
+  if (Array.isArray(vnode)) return vnode.map(cloneVNode);
+  if (vnode.type === 'TEXT_NODE') return createTextVNode(vnode.value);
+  return createVNode(vnode.type, JSON.parse(JSON.stringify(vnode.props)), vnode.children.map(cloneVNode));
+}
+
+// ═══ DIFF ALGORITHM ═══
+var CREATE = 'CREATE', REMOVE = 'REMOVE', REPLACE = 'REPLACE', UPDATE = 'UPDATE';
+
+function diff(oldV, newV) {
+  if (!oldV && newV) return { type: CREATE, newVNode: newV };
+  if (oldV && !newV) return { type: REMOVE };
+  if (!oldV && !newV) return null;
+  if (oldV.type !== newV.type) return { type: REPLACE, newVNode: newV };
+  if (oldV.type === 'TEXT_NODE') {
+    return oldV.value !== newV.value ? { type: REPLACE, newVNode: newV } : null;
+  }
+  var propPatches = diffProps(oldV.props, newV.props);
+  var childPatches = diffChildren(oldV.children, newV.children);
+  if (!propPatches.length && !childPatches.length) return null;
+  return { type: UPDATE, propPatches: propPatches, childPatches: childPatches };
+}
+function diffProps(oldP, newP) {
+  var patches = [];
+  var newKeys = Object.keys(newP);
+  for (var i = 0; i < newKeys.length; i++) {
+    if (oldP[newKeys[i]] !== newP[newKeys[i]]) patches.push({ action: 'SET', key: newKeys[i], value: newP[newKeys[i]] });
+  }
+  var oldKeys = Object.keys(oldP);
+  for (var j = 0; j < oldKeys.length; j++) {
+    if (!(oldKeys[j] in newP)) patches.push({ action: 'REMOVE', key: oldKeys[j] });
+  }
+  return patches;
+}
+function diffChildren(oldC, newC) {
+  var patches = [];
+  var max = Math.max(oldC.length, newC.length);
+  for (var i = 0; i < max; i++) {
+    var p = diff(i < oldC.length ? oldC[i] : null, i < newC.length ? newC[i] : null);
+    if (p) patches.push({ index: i, patch: p });
+  }
+  return patches;
+}
+
+// ═══ PATCH SYSTEM ═══
+function realChildren(parent) {
+  var result = [];
+  for (var i = 0; i < parent.childNodes.length; i++) {
+    var c = parent.childNodes[i];
+    if (c.nodeType === Node.TEXT_NODE && c.textContent.trim() === '') continue;
+    result.push(c);
+  }
+  return result;
+}
+function applyPatch(parent, node, patch) {
+  switch (patch.type) {
+    case CREATE:
+      parent.appendChild(renderVNode(patch.newVNode)); break;
+    case REMOVE:
+      if (node && node.parentNode) node.parentNode.removeChild(node); break;
+    case REPLACE:
+      var newEl = renderVNode(patch.newVNode);
+      if (node && node.parentNode) node.parentNode.replaceChild(newEl, node);
+      else parent.appendChild(newEl);
+      break;
+    case UPDATE:
+      if (patch.propPatches) {
+        for (var i = 0; i < patch.propPatches.length; i++) {
+          var pp = patch.propPatches[i];
+          if (pp.action === 'SET') { node.setAttribute(pp.key, pp.value); if (pp.key === 'style') node.style.cssText = pp.value; }
+          else node.removeAttribute(pp.key);
+        }
+      }
+      if (patch.childPatches && patch.childPatches.length > 0) applyChildPatches(node, patch.childPatches);
+      break;
+  }
+}
+function applyChildPatches(parent, childPatches) {
+  var sorted = childPatches.slice().sort(function(a, b) { return b.index - a.index; });
+  for (var i = 0; i < sorted.length; i++) {
+    if (sorted[i].patch.type === REMOVE) {
+      var kids = realChildren(parent);
+      if (kids[sorted[i].index]) parent.removeChild(kids[sorted[i].index]);
+    }
+  }
+  var others = childPatches.filter(function(cp) { return cp.patch.type !== REMOVE; });
+  others.sort(function(a, b) { return a.index - b.index; });
+  for (var j = 0; j < others.length; j++) {
+    var cp = others[j];
+    var children = realChildren(parent);
+    if (cp.patch.type === CREATE) {
+      var newNode = renderVNode(cp.patch.newVNode);
+      if (cp.index >= children.length) parent.appendChild(newNode);
+      else parent.insertBefore(newNode, children[cp.index]);
+    } else {
+      if (children[cp.index]) applyPatch(parent, children[cp.index], cp.patch);
+    }
+  }
+}
+function patchContainer(container, patches) { applyChildPatches(container, patches); }
+
+// ═══ STATE HISTORY ═══
+var stateHistory = {
+  states: [], idx: -1,
+  push: function(v) { this.states = this.states.slice(0, this.idx + 1); this.states.push(cloneVNode(v)); this.idx = this.states.length - 1; },
+  undo: function() { if (this.idx <= 0) return null; this.idx--; return cloneVNode(this.states[this.idx]); },
+  redo: function() { if (this.idx >= this.states.length - 1) return null; this.idx++; return cloneVNode(this.states[this.idx]); },
+  canUndo: function() { return this.idx > 0; },
+  canRedo: function() { return this.idx < this.states.length - 1; },
+  info: function() { return { cur: this.idx + 1, total: this.states.length }; }
+};
+
+// ═══ DIFF LOG ═══
+function patchToLogs(patch, path) {
+  var logs = [];
+  if (patch.type === CREATE) {
+    var tag = patch.newVNode.type === 'TEXT_NODE' ? 'text' : patch.newVNode.type;
+    logs.push({ cls: 'create', msg: '+ CREATE ' + path + ' &lt;' + tag + '&gt;' });
+  } else if (patch.type === REMOVE) {
+    logs.push({ cls: 'remove', msg: '- REMOVE ' + path });
+  } else if (patch.type === REPLACE) {
+    var t = patch.newVNode.type === 'TEXT_NODE' ? 'text' : patch.newVNode.type;
+    logs.push({ cls: 'replace', msg: '~ REPLACE ' + path + ' &rarr; &lt;' + t + '&gt;' });
+  } else if (patch.type === UPDATE) {
+    if (patch.propPatches) {
+      for (var i = 0; i < patch.propPatches.length; i++) {
+        var pp = patch.propPatches[i];
+        if (pp.action === 'SET') logs.push({ cls: 'update', msg: '&#10033; SET ' + path + ' [' + pp.key + ']' });
+        else logs.push({ cls: 'update', msg: '&#10005; DEL ' + path + ' [' + pp.key + ']' });
+      }
+    }
+    if (patch.childPatches) {
+      for (var j = 0; j < patch.childPatches.length; j++) {
+        var cp = patch.childPatches[j];
+        logs = logs.concat(patchToLogs(cp.patch, path + '[' + cp.index + ']'));
+      }
+    }
+  }
+  return logs;
+}
+function collectAllLogs(containerPatches) {
+  var logs = [];
+  for (var i = 0; i < containerPatches.length; i++) {
+    var cp = containerPatches[i];
+    logs = logs.concat(patchToLogs(cp.patch, 'root[' + cp.index + ']'));
+  }
+  return logs;
+}
+
+// ═══ UI STATE ═══
+var actualArea, testArea, logEl, currentVNodes = [];
+var selectedEl = null;
+var currentPane = 'actual';
+
+function addLog(cls, msg) {
+  var d = document.createElement('div');
+  d.className = 'log-entry log-' + cls;
+  if (cls === 'divider') { d.textContent = msg; }
+  else {
+    var now = new Date();
+    var t = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ':' + ('0' + now.getSeconds()).slice(-2);
+    d.innerHTML = '<span class="log-time">' + t + '</span>' + msg;
+  }
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function updateUI() {
+  document.getElementById('btn-undo').disabled = !stateHistory.canUndo();
+  document.getElementById('btn-redo').disabled = !stateHistory.canRedo();
+  var info = stateHistory.info();
+  document.getElementById('history-indicator').textContent = info.cur + ' / ' + info.total;
+}
+
+function toggleLogDrawer() {
+  document.getElementById('log-drawer').classList.toggle('collapsed');
+}
+
+// ═══ VIEW SWITCHING ═══
+function switchPane(name) {
+  currentPane = name;
+  var tabs = document.querySelectorAll('.view-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-pane') === name);
+  }
+  document.getElementById('actual-pane').classList.toggle('hidden', name !== 'actual');
+  document.getElementById('test-pane').classList.toggle('hidden', name !== 'test');
+  document.getElementById('edit-toolbar').classList.toggle('show', name === 'test');
+  if (name !== 'test') _maskFocusState.active = false;
+  if (name !== 'actual') _layoutState.active = false;
+  if (name === 'test') syncCamoStateFromDom();
+  else if (_camoState.selecting) {
+    _camoState.selecting = false;
+    _camoState.consumeClick = false;
+    document.body.classList.remove('camo-selecting');
+    refreshCamoPanel();
+  }
+  syncMapViewToDom();
+  applyMaskFocusState();
+  updateLayoutCalibrationUI();
+}
+
+// ═══ ELEMENT SELECTION ═══
+function selectElement(el) {
+  if (selectedEl) selectedEl.classList.remove('el-selected');
+  if (!el || el === testArea || el.nodeType !== Node.ELEMENT_NODE) { selectedEl = null; return; }
+  selectedEl = el;
+  selectedEl.classList.add('el-selected');
+}
+
+// ═══ EDITING TOOLS ═══
+function toolMoveUp() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var prev = selectedEl.previousElementSibling;
+  if (prev) { selectedEl.parentNode.insertBefore(selectedEl, prev); addLog('info', '&#9650; Moved up'); }
+}
+function toolMoveDown() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var next = selectedEl.nextElementSibling;
+  if (next) { selectedEl.parentNode.insertBefore(next, selectedEl); addLog('info', '&#9660; Moved down'); }
+}
+function toolEditAttrs() {
+  if (!selectedEl) return;
+  var list = document.getElementById('attr-list');
+  list.innerHTML = '';
+  for (var i = 0; i < selectedEl.attributes.length; i++) {
+    var a = selectedEl.attributes[i];
+    if (a.name === 'contenteditable' || (a.name === 'class' && a.value.indexOf('el-selected') >= 0)) continue;
+    var val = a.value;
+    if (a.name === 'class') val = val.replace(/\s*el-selected\s*/g, '').trim();
+    addAttrRow(a.name, val);
+  }
+  document.getElementById('attr-modal').classList.add('show');
+}
+function addAttrRow(name, value) {
+  var list = document.getElementById('attr-list');
+  var row = document.createElement('div');
+  row.className = 'modal-row';
+  row.innerHTML = '<input type="text" placeholder="name" value="' + (name || '') + '"><input type="text" placeholder="value" value="' + (value || '').replace(/"/g, '&quot;') + '"><button class="del-attr" onclick="this.parentNode.remove()">&#10005;</button>';
+  list.appendChild(row);
+}
+function saveAttrs() {
+  if (!selectedEl) return;
+  var toRemove = [];
+  for (var i = 0; i < selectedEl.attributes.length; i++) {
+    var n = selectedEl.attributes[i].name;
+    if (n !== 'contenteditable') toRemove.push(n);
+  }
+  for (var j = 0; j < toRemove.length; j++) selectedEl.removeAttribute(toRemove[j]);
+  var rows = document.getElementById('attr-list').querySelectorAll('.modal-row');
+  var hasClass = false;
+  for (var k = 0; k < rows.length; k++) {
+    var inputs = rows[k].querySelectorAll('input');
+    var key = inputs[0].value.trim();
+    var val = inputs[1].value.trim();
+    if (key) {
+      if (key === 'class') { val += ' el-selected'; hasClass = true; }
+      selectedEl.setAttribute(key, val);
+      if (key === 'style') selectedEl.style.cssText = val;
+    }
+  }
+  if (!hasClass) selectedEl.classList.add('el-selected');
+  closeAttrModal();
+  addLog('info', '&#9881; Attributes updated');
+}
+function closeAttrModal() { document.getElementById('attr-modal').classList.remove('show'); }
+function toolChangeTag() {
+  if (!selectedEl) return;
+  var tag = selectedEl.tagName.toLowerCase();
+  document.getElementById('current-tag-display').textContent = '<' + tag + '>';
+  document.getElementById('tag-select').value = tag;
+  document.getElementById('tag-modal').classList.add('show');
+}
+function saveTagChange() {
+  if (!selectedEl) return;
+  var newTag = document.getElementById('tag-select').value;
+  var oldTag = selectedEl.tagName.toLowerCase();
+  if (newTag === oldTag) { closeTagModal(); return; }
+  var newEl = document.createElement(newTag);
+  for (var i = 0; i < selectedEl.attributes.length; i++) {
+    var a = selectedEl.attributes[i];
+    if (a.name === 'contenteditable') continue;
+    var val = a.value;
+    if (a.name === 'class') val = val.replace(/\s*el-selected\s*/g, '').trim();
+    if (val || a.name !== 'class') newEl.setAttribute(a.name, val);
+  }
+  while (selectedEl.firstChild) newEl.appendChild(selectedEl.firstChild);
+  selectedEl.parentNode.replaceChild(newEl, selectedEl);
+  selectElement(newEl);
+  closeTagModal();
+  addLog('info', 'Tag: &lt;' + oldTag + '&gt; &rarr; &lt;' + newTag + '&gt;');
+}
+function closeTagModal() { document.getElementById('tag-modal').classList.remove('show'); }
+function toolDuplicate() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var clone = selectedEl.cloneNode(true);
+  clone.classList.remove('el-selected');
+  selectedEl.parentNode.insertBefore(clone, selectedEl.nextSibling);
+  addLog('info', '&#10697; Cloned');
+}
+function toolAddChild() {
+  if (!selectedEl) return;
+  var child = document.createElement('div');
+  child.textContent = 'new child';
+  child.style.cssText = 'padding:6px 10px;border:1px dashed var(--g-blue);border-radius:4px;font-size:12px;color:var(--g-blue)';
+  selectedEl.appendChild(child);
+  addLog('info', '+ Child added');
+}
+function toolAddSibling() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var sibling = document.createElement('div');
+  sibling.textContent = 'new sibling';
+  sibling.style.cssText = 'padding:6px 10px;border:1px dashed var(--g-yellow);border-radius:4px;font-size:12px;color:var(--g-yellow)';
+  selectedEl.parentNode.insertBefore(sibling, selectedEl.nextSibling);
+  addLog('info', '+ Sibling added');
+}
+function toolWrapEl() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'padding:6px;border:1px dashed var(--border2);border-radius:4px';
+  selectedEl.parentNode.insertBefore(wrapper, selectedEl);
+  wrapper.appendChild(selectedEl);
+  selectElement(wrapper);
+  addLog('info', '&#8862; Wrapped in div');
+}
+function toolDelete() {
+  if (!selectedEl || !selectedEl.parentNode) return;
+  var tag = selectedEl.tagName.toLowerCase();
+  selectedEl.parentNode.removeChild(selectedEl);
+  selectedEl = null;
+  addLog('info', '&#10005; Deleted &lt;' + tag + '&gt;');
+}
+
+// ═══ PATCH / UNDO / REDO ═══
+function handlePatch() {
+  if (selectedEl) { selectedEl.classList.remove('el-selected'); selectedEl = null; }
+  var newVNodes = containerToVNodes(testArea);
+  var patches = diffChildren(currentVNodes, newVNodes);
+  if (!patches.length) { addLog('info', 'No changes detected'); return; }
+  var info = stateHistory.info();
+  addLog('divider', '── Patch #' + info.total + ' ──');
+  var logs = collectAllLogs(patches);
+  for (var i = 0; i < logs.length; i++) addLog(logs[i].cls, logs[i].msg);
+  addLog('info', logs.length + ' change(s) applied');
+  patchContainer(actualArea, patches);
+  currentVNodes = cloneVNode(newVNodes);
+  stateHistory.push(currentVNodes);
+  syncPersistedLayout(true);
+  updateUI();
+  // Auto-switch to actual pane to see result
+  switchPane('actual');
+}
+function handleUndo() {
+  var prev = stateHistory.undo();
+  if (!prev) return;
+  currentVNodes = prev;
+  renderToContainer(currentVNodes, actualArea);
+  renderToContainer(cloneVNode(currentVNodes), testArea);
+  syncPersistedLayout(true);
+  selectedEl = null;
+  syncCamoStateFromDom();
+  var info = stateHistory.info();
+  addLog('info', '&#8617; Undo &rarr; ' + info.cur + '/' + info.total);
+  updateUI();
+}
+function handleRedo() {
+  var next = stateHistory.redo();
+  if (!next) return;
+  currentVNodes = next;
+  renderToContainer(currentVNodes, actualArea);
+  renderToContainer(cloneVNode(currentVNodes), testArea);
+  syncPersistedLayout(true);
+  selectedEl = null;
+  syncCamoStateFromDom();
+  var info = stateHistory.info();
+  addLog('info', '&#8618; Redo &rarr; ' + info.cur + '/' + info.total);
+  updateUI();
+}
+
+// ═══ INIT ═══
+function init() {
+  actualArea = document.getElementById('actual-area');
+  testArea = document.getElementById('test-area');
+  logEl = document.getElementById('diff-log');
+  _layoutState.positions = readLayoutPositions();
+  applySatelliteImagery(SAT_URL, SAT_NATIVE_SIZE.width, SAT_NATIVE_SIZE.height);
+
+  actualArea.innerHTML = SAMPLE_HTML;
+  applyPersistedLayoutToArea(actualArea);
+  currentVNodes = containerToVNodes(actualArea);
+  renderToContainer(cloneVNode(currentVNodes), testArea);
+  applyPersistedLayoutToArea(testArea);
+  currentVNodes = containerToVNodes(actualArea);
+  stateHistory.push(currentVNodes);
+  updateUI();
+  initMapZoom();
+  syncMapViewToDom();
+  scheduleSatelliteRefresh(true);
+  initCamoSelection();
+  initLayoutCalibration();
+  syncCamoStateFromDom();
+  updateLayoutCalibrationUI();
+
+  // 버튼 이벤트
+  document.getElementById('btn-align-layout').onclick = toggleLayoutCalibration;
+  document.getElementById('btn-lock-positions').onclick = lockInPositions;
+  document.getElementById('btn-mask-focus').onclick = toggleMaskFocus;
+  document.getElementById('btn-patch').onclick = handlePatch;
+  document.getElementById('btn-undo').onclick = handleUndo;
+  document.getElementById('btn-redo').onclick = handleRedo;
+  document.getElementById('btn-clear').onclick = function(e) { e.stopPropagation(); logEl.innerHTML = ''; addLog('info', 'Log cleared'); };
+  document.getElementById('btn-align-reset').onclick = resetLayoutCalibration;
+  document.getElementById('btn-align-done').onclick = exitLayoutCalibration;
+  document.getElementById('mask-hud-exit').onclick = exitMaskFocus;
+  document.getElementById('mask-hud-select').onclick = startCamoSelect;
+  document.getElementById('mask-hud-apply').onclick = applyCamo;
+  document.getElementById('mask-hud-clear').onclick = clearCamo;
+  document.getElementById('mask-hud-patch').onclick = handlePatch;
+
+  // 뷰 탭 전환
+  var tabs = document.querySelectorAll('.view-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].onclick = function() { switchPane(this.getAttribute('data-pane')); };
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (_camoState.selecting) {
+      startCamoSelect();
+      return;
+    }
+    if (_maskFocusState.active) exitMaskFocus();
+  });
+
+  window.addEventListener('beforeunload', function() {
+    writeLayoutPositions();
+  });
+
+  // 테스트 영역 요소 선택
+  testArea.addEventListener('click', function(e) {
+    if (_camoState.consumeClick) {
+      _camoState.consumeClick = false;
+      e.preventDefault();
+      return;
+    }
+    if (_camoState.selecting) {
+      e.preventDefault();
+      return;
+    }
+    if (_maskFocusState.active) {
+      e.preventDefault();
+      return;
+    }
+    var target = e.target;
+    if (target.closest && target.closest('[data-map-action]')) {
+      e.preventDefault();
+      return;
+    }
+    if (target.closest && target.closest('.camo-control')) return;
+    if (target === testArea) { selectElement(null); return; }
+    selectElement(target);
+  });
+
+  addLog('info', 'Camp David Satellite View initialized');
+  addLog('info', 'Switch to Test pane to edit, then Patch to apply diff');
+  addLog('info', 'Use Terrain Camo in Test view to drag, sample, and mask a region');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
